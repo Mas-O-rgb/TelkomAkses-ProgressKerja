@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  --color-telkom-red: #ED1E28;
+  --color-telkom-darkred: #C91720;
+  --color-telkom-dark: #1E293B;
+  --color-telkom-gray: #F8FAFC;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
