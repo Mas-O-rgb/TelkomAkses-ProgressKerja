@@ -1,16 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Search, Filter, FileText, Edit3, Trash2 } from 'lucide-react';
 import { hitungStatus } from '@/utils/helpers';
 
+export interface Task {
+  id: number;
+  kategori: string;
+  namaTarget: string;
+  waktuMulai: string;
+  tenggatWaktu: string;
+  progress: number;
+  pic: string;
+  dokumen?: string | null;
+}
+
 interface ProgressTableProps {
-  tasks: any[];
+  tasks: Task[];
   filterKategori: string;
   setFilterKategori: (val: string) => void;
   searchTerm: string;
   setSearchTerm: (val: string) => void;
-  onEdit: (task: any) => void;
+  onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
 }
 
@@ -23,14 +34,21 @@ export default function ProgressTable({
   onEdit,
   onDelete,
 }: ProgressTableProps) {
-  const filteredTasks = tasks.filter(task => {
-    const matchKategori = filterKategori === 'ALL' || task.kategori === filterKategori;
-    const matchSearch = task.namaTarget.toLowerCase().includes(searchTerm.toLowerCase()) || task.pic.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchKategori && matchSearch;
-  });
+  // Gunakan useMemo agar filtering data lebih efisien & cepat
+  const filteredTasks = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return tasks.filter((task) => {
+      const matchKategori = filterKategori === 'ALL' || task.kategori === filterKategori;
+      const matchSearch =
+        task.namaTarget.toLowerCase().includes(searchLower) ||
+        task.pic.toLowerCase().includes(searchLower);
+      return matchKategori && matchSearch;
+    });
+  }, [tasks, filterKategori, searchTerm]);
 
   return (
     <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* Header Filter & Search */}
       <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter size={18} className="text-slate-500" />
@@ -58,6 +76,7 @@ export default function ProgressTable({
         </div>
       </div>
 
+      {/* Tabel Data */}
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -82,7 +101,9 @@ export default function ProgressTable({
                   <tr key={task.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-3 text-center text-slate-500">{index + 1}</td>
                     <td className="p-3 font-semibold text-slate-700">
-                      <span className="px-2 py-1 bg-slate-100 rounded text-xs border border-slate-200">{task.kategori}</span>
+                      <span className="px-2 py-1 bg-slate-100 rounded text-xs border border-slate-200">
+                        {task.kategori}
+                      </span>
                     </td>
                     <td className="p-3 font-medium text-slate-900">{task.namaTarget}</td>
                     <td className="p-3 text-slate-600 text-xs">{task.waktuMulai}</td>
@@ -95,15 +116,34 @@ export default function ProgressTable({
                     </td>
                     <td className="p-3 text-slate-700">{task.pic}</td>
                     <td className="p-3">
-                      <span className="text-xs text-blue-600 underline flex items-center gap-1 cursor-pointer">
-                        <FileText size={12} /> {task.dokumen || 'Lihat'}
-                      </span>
+                      {task.dokumen ? (
+                        <a 
+                          href={task.dokumen} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 underline flex items-center gap-1 hover:text-blue-800 font-medium"
+                        >
+                          <FileText size={12} /> Buka / Unduh
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Tidak ada dokumen</span>
+                      )}
                     </td>
                     <td className="p-3 text-center space-x-2">
-                      <button onClick={() => onEdit(task)} className="text-blue-600 hover:text-blue-800 p-1" title="Edit">
+                      <button 
+                        onClick={() => onEdit(task)} 
+                        className="text-blue-600 hover:text-blue-800 p-1" 
+                        title="Edit"
+                        aria-label={`Edit target ${task.namaTarget}`}
+                      >
                         <Edit3 size={16} />
                       </button>
-                      <button onClick={() => onDelete(task.id)} className="text-red-600 hover:text-red-800 p-1" title="Hapus">
+                      <button 
+                        onClick={() => onDelete(task.id)} 
+                        className="text-red-600 hover:text-red-800 p-1" 
+                        title="Hapus"
+                        aria-label={`Hapus target ${task.namaTarget}`}
+                      >
                         <Trash2 size={16} />
                       </button>
                     </td>

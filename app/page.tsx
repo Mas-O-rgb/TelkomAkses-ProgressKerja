@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ProgressCharts from '@/components/ProgressCharts';
 import ProgressForm from '@/components/ProgressForm';
 import ProgressTable from '@/components/ProgressTable';
@@ -14,7 +14,7 @@ export default function DashboardProgressKerja() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     kategori: 'QMS',
     namaTarget: '',
     waktuMulai: '',
@@ -22,7 +22,9 @@ export default function DashboardProgressKerja() {
     progress: 0,
     pic: DAFTAR_PIC[0],
     dokumen: null as any,
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
 
   // 1. Ambil data dari Database saat pertama kali load
   const fetchTasks = async () => {
@@ -35,7 +37,6 @@ export default function DashboardProgressKerja() {
     if (error) {
       console.error('Gagal mengambil data:', error);
     } else if (data) {
-      // Mapping nama kolom database ke state frontend
       const mappedTasks = data.map((item) => ({
         id: item.id,
         kategori: item.kategori,
@@ -55,26 +56,46 @@ export default function DashboardProgressKerja() {
     fetchTasks();
   }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setCurrentTask(null);
-    setFormData({
-      kategori: 'QMS',
-      namaTarget: '',
-      waktuMulai: '',
-      tenggatWaktu: '',
-      progress: 0,
-      pic: DAFTAR_PIC[0],
-      dokumen: null,
-    });
-  };
+    setFormData(initialFormState);
+  }, []);
 
-  // 2. Simpan / Update ke Database
+  // 2. Simpan / Update ke Database dengan Upload File ke Supabase Storage
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.namaTarget || !formData.waktuMulai || !formData.tenggatWaktu) {
       alert('Mohon isi Nama Target, Waktu Mulai, dan Tenggat Waktu!');
       return;
+    }
+
+    let dokumenUrl = currentTask?.dokumen || null;
+
+    // Jika user memilih file baru untuk di-upload
+    if (formData.dokumen && typeof formData.dokumen !== 'string') {
+      const file = formData.dokumen;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload file ke Storage Supabase (dalam bucket 'dokumen-progress')
+      const { error: uploadError } = await supabase.storage
+        .from('dokumen-progress')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Gagal mengunggah file:', uploadError);
+        alert('Gagal mengunggah dokumen ke server.');
+        return;
+      }
+
+      // Ambil Public URL dari file yang baru di-upload
+      const { data: publicUrlData } = supabase.storage
+        .from('dokumen-progress')
+        .getPublicUrl(filePath);
+
+      dokumenUrl = publicUrlData.publicUrl;
     }
 
     const payload = {
@@ -84,37 +105,25 @@ export default function DashboardProgressKerja() {
       tenggat_waktu: formData.tenggatWaktu,
       progress: formData.progress,
       pic: formData.pic,
-      dokumen: formData.dokumen?.name || (typeof formData.dokumen === 'string' ? formData.dokumen : 'Dokumen.pdf'),
+      dokumen: dokumenUrl, // Menyimpan URL publik file
     };
 
-    if (currentTask) {
-      // Edit Data di Database
-      const { error } = await supabase
-        .from('progress_targets')
-        .update(payload)
-        .eq('id', currentTask.id);
+    const { error } = currentTask
+      ? await supabase.from('progress_targets').update(payload).eq('id', currentTask.id)
+      : await supabase.from('progress_targets').insert([payload]);
 
-      if (error) console.error('Gagal update data:', error);
+    if (error) {
+      console.error(currentTask ? 'Gagal update data:' : 'Gagal tambah data:', error);
     } else {
-      // Tambah Data Baru ke Database
-      const { error } = await supabase
-        .from('progress_targets')
-        .insert([payload]);
-
-      if (error) console.error('Gagal tambah data:', error);
+      resetForm();
+      fetchTasks();
     }
-
-    resetForm();
-    fetchTasks(); // Refresh data dari DB
   };
 
   // 3. Hapus Data dari Database
   const handleDelete = async (id: number) => {
     if (confirm('Apakah Anda yakin ingin menghapus target ini?')) {
-      const { error } = await supabase
-        .from('progress_targets')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('progress_targets').delete().eq('id', id);
 
       if (error) {
         console.error('Gagal menghapus data:', error);
@@ -139,25 +148,31 @@ export default function DashboardProgressKerja() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Kalkulasi data grafik
+  // Helper generik untuk mereduksi duplikasi kode perhitungan grafik
+  const countByField = (field: string, formatter?: (val: string) => string) => {
+    const counts = tasks.reduce((acc: any, task) => {
+      const key = formatter ? formatter(task[field]) : task[field];
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.keys(counts).map(key => ({ name: key, value: counts[key], jumlah: counts[key] }));
+  };
+
+  const pieDataStatus = countByField('', (t) => {
+    // Menggunakan task secara langsung untuk status karena butuh 2 parameter (progress & tenggat)
+    return '';
+  });
+
+  // Kalkulasi data grafik yang dioptimalkan
   const statusCounts = tasks.reduce((acc: any, task) => {
     const statusObj = hitungStatus(task.progress, task.tenggatWaktu);
     acc[statusObj.label] = (acc[statusObj.label] || 0) + 1;
     return acc;
   }, {});
-  const pieDataStatus = Object.keys(statusCounts).map(key => ({ name: key, value: statusCounts[key] }));
+  const pieDataStatusFormatted = Object.keys(statusCounts).map(key => ({ name: key, value: statusCounts[key] }));
 
-  const kategoriCounts = tasks.reduce((acc: any, task) => {
-    acc[task.kategori] = (acc[task.kategori] || 0) + 1;
-    return acc;
-  }, {});
-  const pieDataKategori = Object.keys(kategoriCounts).map(key => ({ name: key, value: kategoriCounts[key] }));
-
-  const picCounts = tasks.reduce((acc: any, task) => {
-    acc[task.pic] = (acc[task.pic] || 0) + 1;
-    return acc;
-  }, {});
-  const barDataPic = Object.keys(picCounts).map(key => ({ name: key, jumlah: picCounts[key] }));
+  const pieDataKategori = countByField('kategori');
+  const barDataPic = countByField('pic');
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
@@ -177,7 +192,7 @@ export default function DashboardProgressKerja() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <ProgressCharts 
-          pieDataStatus={pieDataStatus} 
+          pieDataStatus={pieDataStatusFormatted} 
           pieDataKategori={pieDataKategori} 
           barDataPic={barDataPic} 
         />

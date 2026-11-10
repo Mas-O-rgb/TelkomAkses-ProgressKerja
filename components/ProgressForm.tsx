@@ -4,13 +4,26 @@ import React from 'react';
 import { PlusCircle, X } from 'lucide-react';
 import { DAFTAR_PIC } from '@/utils/helpers';
 
+interface TaskFormState {
+  kategori: string;
+  namaTarget: string;
+  waktuMulai: string;
+  tenggatWaktu: string;
+  progress: number;
+  pic: string;
+  dokumen: any;
+}
+
 interface ProgressFormProps {
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: TaskFormState;
+  setFormData: React.Dispatch<React.SetStateAction<TaskFormState>>;
   currentTask: any;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
 }
+
+// Gaya kelas input yang berulang disatukan di sini agar bersih
+const inputStyle = "w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none";
 
 export default function ProgressForm({ 
   formData, 
@@ -46,7 +59,7 @@ export default function ProgressForm({
             <select 
               value={formData.kategori}
               onChange={(e) => setFormData({...formData, kategori: e.target.value})}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
+              className={inputStyle}
             >
               <option value="QMS">QMS</option>
               <option value="HSE">HSE</option>
@@ -63,7 +76,7 @@ export default function ProgressForm({
               placeholder="Ketik nama target..."
               value={formData.namaTarget}
               onChange={(e) => setFormData({...formData, namaTarget: e.target.value})}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
+              className={inputStyle}
             />
           </div>
 
@@ -75,7 +88,7 @@ export default function ProgressForm({
               required
               value={formData.waktuMulai}
               onChange={(e) => setFormData({...formData, waktuMulai: e.target.value})}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
+              className={inputStyle}
             />
           </div>
 
@@ -87,7 +100,7 @@ export default function ProgressForm({
               required
               value={formData.tenggatWaktu}
               onChange={(e) => setFormData({...formData, tenggatWaktu: e.target.value})}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
+              className={inputStyle}
             />
           </div>
 
@@ -97,11 +110,13 @@ export default function ProgressForm({
             <select 
               value={formData.progress}
               onChange={(e) => setFormData({...formData, progress: Number(e.target.value)})}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
+              className={inputStyle}
             >
-              <option value={0}>0%</option>
-              <option value={20}>10% - 90%</option>
-              <option value={100}>100%</option>
+              <option value={0}>0% (Belum)</option>
+              <option value={25}>25% (Mulai)</option>
+              <option value={50}>50% (Setengah)</option>
+              <option value={75}>75% (Hampir)</option>
+              <option value={100}>100% (Selesai)</option>
             </select>
           </div>
 
@@ -111,7 +126,7 @@ export default function ProgressForm({
             <select 
               value={formData.pic}
               onChange={(e) => setFormData({...formData, pic: e.target.value})}
-              className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
+              className={inputStyle}
             >
               {DAFTAR_PIC.map((nama, idx) => (
                 <option key={idx} value={nama}>{nama}</option>
