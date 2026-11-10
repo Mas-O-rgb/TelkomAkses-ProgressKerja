@@ -100,9 +100,7 @@ export default function ProgressForm({
               className="w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none"
             >
               <option value={0}>0%</option>
-              <option value={20}>10% - 30%</option>
-              <option value={50}>40% - 70%</option>
-              <option value={90}>80% - 90%</option>
+              <option value={20}>10% - 90%</option>
               <option value={100}>100%</option>
             </select>
           </div>
