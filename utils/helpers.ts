@@ -5,7 +5,7 @@ export const DAFTAR_PIC = [
   'ANDY AKBAR MAKMUR', 
   'GHALY QORI MUBAROQ', 
   'ISHMI KHAFISHAH NASUTION', 
-  '-',
+  'ARDIANSYAH',
   '-'
 ];
 

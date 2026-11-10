@@ -1,3 +1,8 @@
+// update repository
+1. git config --global core.autocrlf true
+2. git commit -m "Pembaruan logika"
+3. git push origin main
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

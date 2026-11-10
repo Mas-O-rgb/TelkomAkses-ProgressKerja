@@ -113,11 +113,9 @@ export default function ProgressForm({
               className={inputStyle}
               disabled={loading}
             >
-              <option value={0}>0% (Belum)</option>
-              <option value={25}>25% (Mulai)</option>
-              <option value={50}>50% (Setengah)</option>
-              <option value={75}>75% (Hampir)</option>
-              <option value={100}>100% (Selesai)</option>
+              <option value={0}>0% (Belum Dikerjakan)</option>
+              <option value={50}>10% -90% (On Progress)</option>
+              <option value={100}>100% (Sudah Selesai)</option>
             </select>
           </div>
 
