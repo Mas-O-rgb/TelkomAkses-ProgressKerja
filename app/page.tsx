@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ProgressCharts from '@/components/ProgressCharts';
 import ProgressForm from '@/components/ProgressForm';
 import ProgressTable from '@/components/ProgressTable';
-import { hitungStatus, DAFTAR_PIC } from '@/utils/helpers';
+import { getStatusInfo, DAFTAR_PIC } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
 
 export default function DashboardProgressKerja() {
@@ -13,6 +13,7 @@ export default function DashboardProgressKerja() {
   const [filterKategori, setFilterKategori] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialFormState = {
     kategori: 'QMS',
@@ -70,53 +71,59 @@ export default function DashboardProgressKerja() {
       return;
     }
 
-    let dokumenUrl = currentTask?.dokumen || null;
+    // Aktifkan loading instan detik itu juga
+    setIsSubmitting(true);
 
-    // Jika user memilih file baru untuk di-upload
-    if (formData.dokumen && typeof formData.dokumen !== 'string') {
-      const file = formData.dokumen;
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${fileName}`;
+    try {
+      let dokumenUrl = currentTask?.dokumen || null;
 
-      // Upload file ke Storage Supabase (dalam bucket 'dokumen-progress')
-      const { error: uploadError } = await supabase.storage
-        .from('dokumen-progress')
-        .upload(filePath, file);
+      if (formData.dokumen && typeof formData.dokumen !== 'string') {
+        const file = formData.dokumen;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-      if (uploadError) {
-        console.error('Gagal mengunggah file:', uploadError);
-        alert('Gagal mengunggah dokumen ke server.');
-        return;
+        const { error: uploadError } = await supabase.storage
+          .from('dokumen-progress')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('Gagal mengunggah file:', uploadError);
+          alert('Gagal mengunggah dokumen ke server.');
+          setIsSubmitting(false); // Matikan loading jika error
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('dokumen-progress')
+          .getPublicUrl(filePath);
+
+        dokumenUrl = publicUrlData.publicUrl;
       }
 
-      // Ambil Public URL dari file yang baru di-upload
-      const { data: publicUrlData } = supabase.storage
-        .from('dokumen-progress')
-        .getPublicUrl(filePath);
+      const payload = {
+        kategori: formData.kategori,
+        nama_target: formData.namaTarget,
+        waktu_mulai: formData.waktuMulai,
+        tenggat_waktu: formData.tenggatWaktu,
+        progress: formData.progress,
+        pic: formData.pic,
+        dokumen: dokumenUrl,
+      };
 
-      dokumenUrl = publicUrlData.publicUrl;
-    }
+      const { error } = currentTask
+        ? await supabase.from('progress_targets').update(payload).eq('id', currentTask.id)
+        : await supabase.from('progress_targets').insert([payload]);
 
-    const payload = {
-      kategori: formData.kategori,
-      nama_target: formData.namaTarget,
-      waktu_mulai: formData.waktuMulai,
-      tenggat_waktu: formData.tenggatWaktu,
-      progress: formData.progress,
-      pic: formData.pic,
-      dokumen: dokumenUrl, // Menyimpan URL publik file
-    };
-
-    const { error } = currentTask
-      ? await supabase.from('progress_targets').update(payload).eq('id', currentTask.id)
-      : await supabase.from('progress_targets').insert([payload]);
-
-    if (error) {
-      console.error(currentTask ? 'Gagal update data:' : 'Gagal tambah data:', error);
-    } else {
-      resetForm();
-      fetchTasks();
+      if (error) {
+        console.error(currentTask ? 'Gagal update data:' : 'Gagal tambah data:', error);
+      } else {
+        resetForm();
+        await fetchTasks();
+      }
+    } finally {
+      // Pastikan loading dimatikan setelah seluruh proses selesai
+      setIsSubmitting(false);
     }
   };
 
@@ -165,8 +172,8 @@ export default function DashboardProgressKerja() {
 
   // Kalkulasi data grafik yang dioptimalkan
   const statusCounts = tasks.reduce((acc: any, task) => {
-    const statusObj = hitungStatus(task.progress, task.tenggatWaktu);
-    acc[statusObj.label] = (acc[statusObj.label] || 0) + 1;
+    const statusObj = getStatusInfo(task.tenggatWaktu, task.progress);
+    acc[statusObj.text] = (acc[statusObj.text] || 0) + 1;
     return acc;
   }, {});
   const pieDataStatusFormatted = Object.keys(statusCounts).map(key => ({ name: key, value: statusCounts[key] }));
@@ -203,6 +210,7 @@ export default function DashboardProgressKerja() {
           currentTask={currentTask}
           onSubmit={handleSubmit}
           onReset={resetForm}
+          loading={isSubmitting} 
         />
 
         {loading ? (

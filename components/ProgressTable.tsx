@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Search, Filter, FileText, Edit3, Trash2 } from 'lucide-react';
-import { hitungStatus } from '@/utils/helpers';
+import { getStatusInfo } from '@/utils/helpers';
 
 export interface Task {
   id: number;
@@ -96,7 +96,7 @@ export default function ProgressTable({
           <tbody className="divide-y divide-slate-100 text-sm">
             {filteredTasks.length > 0 ? (
               filteredTasks.map((task, index) => {
-                const statusInfo = hitungStatus(task.progress, task.tenggatWaktu);
+                const statusInfo = getStatusInfo(task.tenggatWaktu, task.progress);
                 return (
                   <tr key={task.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-3 text-center text-slate-500">{index + 1}</td>
@@ -110,8 +110,8 @@ export default function ProgressTable({
                     <td className="p-3 text-slate-600 text-xs">{task.tenggatWaktu}</td>
                     <td className="p-3 text-center font-bold text-slate-700">{task.progress}%</td>
                     <td className="p-3 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.color}`}>
-                        {statusInfo.label}
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusInfo.className}`}>
+                        {statusInfo.text}
                       </span>
                     </td>
                     <td className="p-3 text-slate-700">{task.pic}</td>

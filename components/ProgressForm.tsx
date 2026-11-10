@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PlusCircle, X } from 'lucide-react';
+import { PlusCircle, X, Loader2 } from 'lucide-react';
 import { DAFTAR_PIC } from '@/utils/helpers';
 
 interface TaskFormState {
@@ -20,9 +20,9 @@ interface ProgressFormProps {
   currentTask: any;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
+  loading?: boolean; // Tambahan prop loading
 }
 
-// Gaya kelas input yang berulang disatukan di sini agar bersih
 const inputStyle = "w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none";
 
 export default function ProgressForm({ 
@@ -30,7 +30,8 @@ export default function ProgressForm({
   setFormData, 
   currentTask, 
   onSubmit, 
-  onReset 
+  onReset,
+  loading = false
 }: ProgressFormProps) {
   return (
     <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -53,13 +54,13 @@ export default function ProgressForm({
       <form onSubmit={onSubmit} className="p-6 space-y-4">
         {/* Grid 7 Kolom Input */}
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
-          {/* Kolom 1: Kategori */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Kategori</label>
             <select 
               value={formData.kategori}
               onChange={(e) => setFormData({...formData, kategori: e.target.value})}
               className={inputStyle}
+              disabled={loading}
             >
               <option value="QMS">QMS</option>
               <option value="HSE">HSE</option>
@@ -67,7 +68,6 @@ export default function ProgressForm({
             </select>
           </div>
 
-          {/* Kolom 2: Nama Target */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Nama Target</label>
             <input 
@@ -77,10 +77,10 @@ export default function ProgressForm({
               value={formData.namaTarget}
               onChange={(e) => setFormData({...formData, namaTarget: e.target.value})}
               className={inputStyle}
+              disabled={loading}
             />
           </div>
 
-          {/* Kolom 3: Waktu Mulai */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Waktu Mulai</label>
             <input 
@@ -89,10 +89,10 @@ export default function ProgressForm({
               value={formData.waktuMulai}
               onChange={(e) => setFormData({...formData, waktuMulai: e.target.value})}
               className={inputStyle}
+              disabled={loading}
             />
           </div>
 
-          {/* Kolom 4: Tenggat Waktu */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Tenggat Waktu</label>
             <input 
@@ -101,16 +101,17 @@ export default function ProgressForm({
               value={formData.tenggatWaktu}
               onChange={(e) => setFormData({...formData, tenggatWaktu: e.target.value})}
               className={inputStyle}
+              disabled={loading}
             />
           </div>
 
-          {/* Kolom 5: Progress (%) */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Progress (%)</label>
             <select 
               value={formData.progress}
               onChange={(e) => setFormData({...formData, progress: Number(e.target.value)})}
               className={inputStyle}
+              disabled={loading}
             >
               <option value={0}>0% (Belum)</option>
               <option value={25}>25% (Mulai)</option>
@@ -120,13 +121,13 @@ export default function ProgressForm({
             </select>
           </div>
 
-          {/* Kolom 6: PIC */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">PIC</label>
             <select 
               value={formData.pic}
               onChange={(e) => setFormData({...formData, pic: e.target.value})}
               className={inputStyle}
+              disabled={loading}
             >
               {DAFTAR_PIC.map((nama, idx) => (
                 <option key={idx} value={nama}>{nama}</option>
@@ -134,13 +135,13 @@ export default function ProgressForm({
             </select>
           </div>
 
-          {/* Kolom 7: Upload Dokumen */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dokumen</label>
             <input 
               type="file" 
               onChange={(e) => setFormData({...formData, dokumen: e.target.files?.[0] || null})}
               className="w-full text-xs text-slate-500 border border-slate-300 rounded-lg p-1.5 bg-white file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[#ED1E28] file:text-white hover:file:bg-[#c91720]"
+              disabled={loading}
             />
           </div>
         </div>
@@ -151,16 +152,19 @@ export default function ProgressForm({
             <button 
               type="button" 
               onClick={onReset}
-              className="px-4 py-2 border border-slate-300 rounded-lg text-xs text-slate-600 hover:bg-slate-100 font-medium cursor-pointer"
+              disabled={loading}
+              className="px-4 py-2 border border-slate-300 rounded-lg text-xs text-slate-600 hover:bg-slate-100 font-medium cursor-pointer disabled:opacity-50"
             >
               Batal
             </button>
           )}
           <button 
             type="submit" 
-            className="px-6 py-2 bg-[#ED1E28] hover:bg-[#c91720] text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer"
+            disabled={loading}
+            className="px-6 py-2 bg-[#ED1E28] hover:bg-[#c91720] text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
           >
-            {currentTask ? 'Update Target' : 'Simpan Target'}
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading ? 'Mengunggah...' : (currentTask ? 'Update' : 'Upload')}
           </button>
         </div>
       </form>

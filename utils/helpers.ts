@@ -9,24 +9,36 @@ export const DAFTAR_PIC = [
   '-'
 ];
 
-export const hitungStatus = (progress: number, tenggatWaktu: string) => {
-  const today = new Date().toISOString().split('T')[0];
+export const getStatusInfo = (tenggatWaktu: string, progress: number) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
-  // Jika tanggal hari ini melewati tenggat waktu dan progress belum mencapai 100%
-  const isOverdue = tenggatWaktu < today && progress < 100;
+  const dueDate = new Date(tenggatWaktu);
+  dueDate.setHours(0, 0, 0, 0);
 
-  if (isOverdue) {
-    return { label: 'OVERDUE', color: 'bg-red-100 text-red-700 border-red-300' };
+  // Cek apakah sudah melewati tenggat waktu (dan belum selesai mutlak atau dipaksa overdue)
+  if (today > dueDate) {
+    return {
+      text: 'OVERDUE',
+      className: 'bg-red-100 text-red-700 border border-red-300 font-bold px-2.5 py-1 rounded-full text-[10px]'
+    };
   }
-  
-  // Pemetaan rentang progress ke status otomatis
-  if (progress === 0) {
-    return { label: 'BELUM DIKERJAKAN', color: 'bg-gray-100 text-gray-700 border-gray-300' };
-  } else if (progress >= 10 && progress <= 90) {
-    return { label: 'ON PROGRESS', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' };
-  } else if (progress === 100) {
-    return { label: 'SUDAH SELESAI', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' };
+
+  // Jika belum lewat tenggat waktu, cek progress
+  if (progress === 100) {
+    return {
+      text: 'SUDAH SELESAI',
+      className: 'bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-[10px]'
+    };
+  } else if (progress > 0) {
+    return {
+      text: 'ON PROGRESS',
+      className: 'bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-[10px]'
+    };
   } else {
-    return { label: 'BELUM DIKERJAKAN', color: 'bg-gray-100 text-gray-700 border-gray-300' };
+    return {
+      text: 'BELUM DIKERJAKAN',
+      className: 'bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full text-[10px]'
+    };
   }
 };
