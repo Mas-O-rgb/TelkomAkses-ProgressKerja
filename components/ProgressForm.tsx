@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { PlusCircle, X, Loader2 } from 'lucide-react';
-import { DAFTAR_PIC } from '@/utils/helpers';
 
 interface TaskFormState {
   kategori: string;
@@ -21,6 +20,7 @@ interface ProgressFormProps {
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
   loading?: boolean;
+  isAdmin?: boolean; // <--- Properti tambahan untuk membedakan Admin / PIC
 }
 
 const inputStyle = "w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none";
@@ -31,8 +31,20 @@ export default function ProgressForm({
   currentTask, 
   onSubmit, 
   onReset,
-  loading = false
+  loading = false,
+  isAdmin = false // Default false (untuk PIC)
 }: ProgressFormProps) {
+  
+  // Daftar pilihan PIC khusus untuk Admin
+  const picOptions = [
+    'NUR FAKHRIZA',
+    'ISHMI KHAFISHAH NASUTION',
+    'SHAKILA LARASATI',
+    'ANDY AKBAR MAKMUR',
+    'GHALY QORI MUBAROQ',
+    'ANOM YUDOSENO AJI'
+  ];
+
   return (
     <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="bg-slate-900 px-6 py-3 border-b-4 border-[#ED1E28] flex justify-between items-center">
@@ -52,7 +64,7 @@ export default function ProgressForm({
       </div>
 
       <form onSubmit={onSubmit} className="p-6 space-y-4">
-        {/* Grid 7 Kolom Input */}
+        {/* Grid Input */}
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Kategori</label>
@@ -118,19 +130,26 @@ export default function ProgressForm({
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">PIC</label>
-            <select 
-              value={formData.pic}
-              onChange={(e) => setFormData({...formData, pic: e.target.value})}
-              className={inputStyle}
-              disabled={loading}
-            >
-              {DAFTAR_PIC.map((nama, idx) => (
-                <option key={idx} value={nama}>{nama}</option>
-              ))}
-            </select>
-          </div>
+          {/* KONDISI: Jika ADMIN tampilkan Dropdown PIC. Jika PIC biasa, sembunyikan */}
+          {isAdmin ? (
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">PIC</label>
+              <select 
+                value={formData.pic}
+                onChange={(e) => setFormData({...formData, pic: e.target.value})}
+                className={inputStyle}
+                required
+                disabled={loading}
+              >
+                <option value="">Pilih PIC...</option>
+                {picOptions.map((name, idx) => (
+                  <option key={idx} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <input type="hidden" name="pic" value={formData.pic} />
+          )}
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dokumen</label>
@@ -155,7 +174,7 @@ export default function ProgressForm({
               Batal
             </button>
           )}
-          <button 
+          <button
             type="submit" 
             disabled={loading}
             className="px-6 py-2 bg-[#ED1E28] hover:bg-[#c91720] text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"

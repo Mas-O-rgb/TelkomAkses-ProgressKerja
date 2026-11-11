@@ -227,13 +227,14 @@ export default function AdminDashboard() {
         />
 
         {/* Form Input / Edit Target untuk Admin */}
-        <ProgressForm 
+        <ProgressForm
           formData={formData}
           setFormData={setFormData}
           currentTask={currentTask}
           onSubmit={handleSubmit}
           onReset={resetForm}
-          loading={isSubmitting} 
+          loading={isSubmitting}
+          isAdmin={true}  // agar dropdown PIC muncul khusus di Admin */
         />
 
         {loading ? (

@@ -83,7 +83,7 @@ export default function ProgressTable({
             <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
               <th className="p-3 text-center">No</th>
               <th className="p-3">Kategori</th>
-              <th className="p-3">Nama Target</th>
+              <th className="p-3">Rincian Target</th>
               <th className="p-3">Waktu Mulai</th>
               <th className="p-3">Tenggat Waktu</th>
               <th className="p-3 text-center">Progress</th>
@@ -115,20 +115,25 @@ export default function ProgressTable({
                       </span>
                     </td>
                     <td className="p-3 text-slate-700">{task.pic}</td>
-                    <td className="p-3">
-                      {task.dokumen ? (
-                        <a 
-                          href={task.dokumen} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 underline flex items-center gap-1 hover:text-blue-800 font-medium"
-                        >
-                          <FileText size={12} /> Buka / Unduh
-                        </a>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">Tidak ada dokumen</span>
-                      )}
-                    </td>
+                    <td className="px-4 py-3 text-xs">
+  {task.dokumen && 
+   task.dokumen.trim() !== "" && 
+   task.dokumen !== "null" && 
+   task.dokumen !== "-" ? (
+    <a 
+      href={task.dokumen} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="text-blue-600 hover:underline flex items-center gap-1 font-medium"
+    >
+      <FileText size={14} /> Buka / Unduh
+    </a>
+  ) : (
+    <span className="text-slate-400 italic bg-slate-100 px-2 py-1 rounded text-[11px]">
+      Tidak ada dokumen
+    </span>
+  )}
+</td>
                     <td className="p-3 text-center space-x-2">
                       <button 
                         onClick={() => onEdit(task)} 

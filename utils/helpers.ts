@@ -6,7 +6,8 @@ export const DAFTAR_PIC = [
   'GHALY QORI MUBAROQ', 
   'ISHMI KHAFISHAH NASUTION', 
   'ARDIANSYAH',
-  '-'
+  'NUR FAKHRIZA',
+  'SHAKILA LARASATI'
 ];
 
 export const getStatusInfo = (tenggatWaktu: string, progress: number) => {

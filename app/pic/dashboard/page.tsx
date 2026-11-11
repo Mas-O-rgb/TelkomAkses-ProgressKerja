@@ -20,35 +20,17 @@ export default function PicDashboard() {
 
   // 1. Verifikasi Sesi & Ambil Identitas PIC yang Sedang Login
   useEffect(() => {
-    const checkPicAuth = async () => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+  // 1. Ambil nama PIC dari sesi login
+  const loggedInPicName = sessionStorage.getItem('loggedInPic') || '';
+  
+  setLoggedInPic(loggedInPicName);
 
-      if (userError || !user) {
-        router.push('/');
-        return;
-      }
-
-      // Ambil profil user dari database untuk memastikan rolenya 'pic' dan ambil 'nama_pic' resminya
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, nama_pic, email')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || profile?.role !== 'pic') {
-        await supabase.auth.signOut();
-        router.push('/');
-        return;
-      }
-
-      const picName = profile.nama_pic || user.email || 'Pegawai';
-      setLoggedInPic(picName);
-      setUserEmail(profile.email || user.email || '');
-      fetchTasks(picName);
-    };
-
-    checkPicAuth();
-  }, [router]);
+  // 2. Kunci nilai PIC di dalam formData
+  setFormData((prev) => ({
+    ...prev,
+    pic: loggedInPicName
+  }));
+}, []);
 
   // 2. Ambil Data Target KHUSUS Milik PIC Tersebut
   const fetchTasks = async (picName: string) => {
@@ -92,65 +74,32 @@ export default function PicDashboard() {
   }, [loggedInPic]);
 
   // 3. Fungsi Tambah / Update Target Mandiri oleh PIC
+// 3. Fungsi Tambah / Update Target Mandiri oleh PIC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.kategori || !formData.namaTarget || !formData.waktuMulai || !formData.tenggatWaktu) {
-      alert('Mohon isi Kategori, Nama Target, Waktu Mulai, dan Tenggat Waktu!');
-      return;
-    }
-
     setIsSubmitting(true);
 
-    try {
-      let dokumenUrl = currentTask?.dokumen || null;
-
-      if (formData.dokumen && typeof formData.dokumen !== 'string') {
-        const file = formData.dokumen;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('dokumen-progress')
-          .upload(fileName, file);
-
-        if (uploadError) {
-          console.error('Gagal mengunggah file:', uploadError);
-          alert('Gagal mengunggah dokumen.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('dokumen-progress')
-          .getPublicUrl(fileName);
-
-        dokumenUrl = publicUrlData.publicUrl;
-      }
-
-      const payload = {
+    // Kirim data ke Supabase menggunakan nama tabel yang benar: 'progress_targets'
+    const { error } = await supabase.from('progress_targets').insert([
+      {
         kategori: formData.kategori,
         nama_target: formData.namaTarget,
         waktu_mulai: formData.waktuMulai,
         tenggat_waktu: formData.tenggatWaktu,
         progress: formData.progress,
-        pic: loggedInPic, // Dikunci otomatis sesuai akun PIC yang login
-        dokumen: dokumenUrl,
-      };
-
-      const { error } = currentTask
-        ? await supabase.from('progress_targets').update(payload).eq('id', currentTask.id)
-        : await supabase.from('progress_targets').insert([payload]);
-
-      if (error) {
-        console.error('Gagal menyimpan data:', error);
-      } else {
-        resetForm();
-        await fetchTasks(loggedInPic);
+        pic: loggedInPic, // Menggunakan nama PIC dari akun yang login
+        dokumen: formData.dokumen || null, // Menggunakan state dokumen yang sesuai dari form
       }
-    } finally {
-      setIsSubmitting(false);
+    ]);
+
+    if (error) {
+      alert('Gagal menyimpan: ' + error.message);
+    } else {
+      alert('Target berhasil disimpan!');
+      resetForm();
+      fetchTasks(loggedInPic); // Refresh data tabel setelah disimpan
     }
+    setIsSubmitting(false);
   };
 
   // 4. Hapus Target Mandiri
@@ -214,13 +163,13 @@ export default function PicDashboard() {
       {/* Konten Utama: Fokus ke Form Input & Tabel Pekerjaan Pribadi */}
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         {/* Form Input Target Baru (Field PIC terkunci otomatis sesuai akun login) */}
-        <ProgressForm 
+        <ProgressForm
           formData={{ ...formData, pic: loggedInPic }}
           setFormData={setFormData}
           currentTask={currentTask}
           onSubmit={handleSubmit}
           onReset={resetForm}
-          loading={isSubmitting} 
+          loading={isSubmitting}
         />
 
         {/* Tabel Daftar Target Milik PIC Tersebut */}
