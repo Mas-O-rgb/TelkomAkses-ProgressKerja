@@ -152,7 +152,7 @@ export default function ProgressForm({
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dokumen</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dokumen (Opsional)</label>
             <input 
               type="file" 
               onChange={(e) => setFormData({...formData, dokumen: e.target.files?.[0] || null})}
