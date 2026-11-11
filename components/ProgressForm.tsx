@@ -20,7 +20,7 @@ interface ProgressFormProps {
   currentTask: any;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
-  loading?: boolean; // Tambahan prop loading
+  loading?: boolean;
 }
 
 const inputStyle = "w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none";
@@ -56,24 +56,23 @@ export default function ProgressForm({
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Kategori</label>
-            <select 
+            <input 
+              type="text" 
+              required
+              placeholder="Contoh: QMS, HSE..."
               value={formData.kategori}
               onChange={(e) => setFormData({...formData, kategori: e.target.value})}
               className={inputStyle}
               disabled={loading}
-            >
-              <option value="QMS">QMS</option>
-              <option value="HSE">HSE</option>
-              <option value="MARVEL">MARVEL</option>
-            </select>
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Nama Target</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Rincian Target</label>
             <input 
               type="text" 
               required
-              placeholder="Ketik nama target..."
+              placeholder="Ketik rincian target..."
               value={formData.namaTarget}
               onChange={(e) => setFormData({...formData, namaTarget: e.target.value})}
               className={inputStyle}
@@ -114,7 +113,7 @@ export default function ProgressForm({
               disabled={loading}
             >
               <option value={0}>0% (Belum Dikerjakan)</option>
-              <option value={50}>10% -90% (On Progress)</option>
+              <option value={50}>10% - 90% (On Progress)</option>
               <option value={100}>100% (Sudah Selesai)</option>
             </select>
           </div>
