@@ -183,7 +183,7 @@ function AdminDashboardContent() {
         console.error('Gagal menghapus data:', error);
       } else {
         if (currentTask?.id === id) resetForm();
-        fetchTasks();
+        await fetchTasks(); // Tambahkan await agar loading sinkron
       }
     }
   };

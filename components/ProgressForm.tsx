@@ -1,220 +1,171 @@
 'use client';
 
 import React from 'react';
-import { PlusCircle, X, Loader2 } from 'lucide-react';
-
-interface TaskFormState {
-  kategori: string;
-  namaTarget: string;
-  waktuMulai: string;
-  tenggatWaktu: string;
-  progress: number;
-  pic: string;
-  keterangan: string;
-  dokumen: any;
-}
+import { Loader2 } from 'lucide-react';
+import { DAFTAR_PIC } from '@/utils/helpers';
 
 interface ProgressFormProps {
-  formData: TaskFormState;
-  setFormData: React.Dispatch<React.SetStateAction<TaskFormState>>;
+  formData: any;
+  setFormData: (data: any) => void;
   currentTask: any;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
-  loading?: boolean;
-  isAdmin?: boolean; // <--- Properti tambahan untuk membedakan Admin / PIC
+  loading: boolean;
+  isAdmin?: boolean;
 }
 
-const inputStyle = "w-full border border-slate-300 rounded-lg p-2 text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#ED1E28] focus:outline-none";
-
-export default function ProgressForm({ 
-  formData, 
-  setFormData, 
-  currentTask, 
-  onSubmit, 
+export default function ProgressForm({
+  formData,
+  setFormData,
+  currentTask,
+  onSubmit,
   onReset,
-  loading = false,
-  isAdmin = false // Default false (untuk PIC)
+  loading,
+  isAdmin = true,
 }: ProgressFormProps) {
-  
-  // Daftar pilihan PIC khusus untuk Admin
-  const picOptions = [
-    'NUR FAKHRIZA',
-    'ISHMI KHAFISHAH NASUTION',
-    'SHAKILA LARASATI',
-    'ANDY AKBAR MAKMUR',
-    'ARDIANSYAH',
-    'GHALY QORI MUBAROQ',
-    'ANOM YUDOSENO AJI'
-  ];
+  if (!isAdmin) return null;
 
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="bg-slate-900 px-6 py-3 border-b-4 border-[#ED1E28] flex justify-between items-center">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2 tracking-wide uppercase">
-          <PlusCircle size={18} className="text-[#ED1E28]" /> 
-          {currentTask ? 'Form Edit Target Progress' : 'Form Input Target Progress Baru'}
-        </h2>
-        {currentTask && (
-          <button 
-            type="button" 
-            onClick={onReset}
-            className="text-xs text-slate-300 hover:text-white underline flex items-center gap-1 cursor-pointer"
-          >
-            <X size={14} /> Batal Edit
-          </button>
-        )}
-      </div>
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+      <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4">
+        {currentTask ? 'Edit Target' : 'Tambah Target Baru'}
+      </h2>
 
-      <form onSubmit={onSubmit} className="p-6 space-y-4">
-        {/* Grid Input */}
-
-        {/* Kategori */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+      <form onSubmit={onSubmit} className="space-y-4">
+        {/* BARIS 1: Kategori, Rincian Target, Waktu Mulai, Tenggat Waktu */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Kategori<span className="text-[#ED1E28]">*</span>
+              Kategori <span className="text-[#ED1E28]">*</span>
             </label>
-            <input 
-              type="text" 
-              required
+            <input
+              type="text"
               placeholder="Contoh: QMS, HSE..."
               value={formData.kategori}
-              onChange={(e) => setFormData({...formData, kategori: e.target.value})}
-              className={inputStyle}
-              disabled={loading}
+              onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
             />
           </div>
 
-          {/* Rincian Target */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Rincian Target<span className="text-[#ED1E28]">*</span>
+              Rincian Target <span className="text-[#ED1E28]">*</span>
             </label>
-            <input 
-              type="text" 
-              required
+            <input
+              type="text"
               placeholder="Ketik rincian target..."
               value={formData.namaTarget}
-              onChange={(e) => setFormData({...formData, namaTarget: e.target.value})}
-              className={inputStyle}
-              disabled={loading}
+              onChange={(e) => setFormData({ ...formData, namaTarget: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
             />
           </div>
 
-          {/* Waktu Mulai */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Waktu Mulai<span className="text-[#ED1E28]">*</span>
+              Waktu Mulai <span className="text-[#ED1E28]">*</span>
             </label>
-            <input 
-              type="date" 
-              required
+            <input
+              type="date"
               value={formData.waktuMulai}
-              onChange={(e) => setFormData({...formData, waktuMulai: e.target.value})}
-              className={inputStyle}
-              disabled={loading}
+              onChange={(e) => setFormData({ ...formData, waktuMulai: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
             />
           </div>
 
-          {/* Due Date */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Due Date<span className="text-[#ED1E28]">*</span>
+              Tenggat Waktu <span className="text-[#ED1E28]">*</span>
             </label>
-            <input 
-              type="date" 
-              required
+            <input
+              type="date"
               value={formData.tenggatWaktu}
-              onChange={(e) => setFormData({...formData, tenggatWaktu: e.target.value})}
-              className={inputStyle}
-              disabled={loading}
-            />
-          </div>
-
-
-          {/* Progress */}
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Progress (%)</label>
-            <select 
-              value={formData.progress}
-              onChange={(e) => setFormData({...formData, progress: Number(e.target.value)})}
-              className={inputStyle}
-              disabled={loading}
-            >
-              <option value={0}>0% (Belum Dikerjakan)</option>
-              <option value={50}>10% - 90% (On Progress)</option>
-              <option value={100}>100% (Sudah Selesai)</option>
-            </select>
-          </div>
-
-          {/* PIC */}
-          {isAdmin ? (
-            <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-                PIC<span className="text-[#ED1E28]">*</span>
-              </label>
-              <select 
-                value={formData.pic}
-                onChange={(e) => setFormData({...formData, pic: e.target.value})}
-                className={inputStyle}
-                required
-                disabled={loading}
-              >
-                <option value="">Pilih PIC...</option>
-                {picOptions.map((name, idx) => (
-                  <option key={idx} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <input type="hidden" name="pic" value={formData.pic} />
-          )}
-
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Keterangan (Opsional)</label>
-            <input 
-              type="text" 
-              placeholder="Ketik keterangan tambahan..."
-              value={formData.keterangan || ''}
-              onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
-              className={inputStyle}
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dokumen (Opsional)</label>
-            <input 
-              type="file" 
-              onChange={(e) => setFormData({...formData, dokumen: e.target.files?.[0] || null})}
-              className="w-full text-xs text-slate-500 border border-slate-300 rounded-lg p-1.5 bg-white file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[#ED1E28] file:text-white hover:file:bg-[#c91720]"
-              disabled={loading}
+              onChange={(e) => setFormData({ ...formData, tenggatWaktu: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
             />
           </div>
         </div>
 
-        {/* Tombol Action */}
-        <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          {currentTask && (
-            <button 
-              type="button" 
+        {/* BARIS 2: Progress (%), PIC, Keterangan, Dokumen */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Progress (%)
+            </label>
+            <select
+              value={formData.progress}
+              onChange={(e) => setFormData({ ...formData, progress: Number(e.target.value) })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+            >
+              <option value={0}>0%</option>
+              <option value={50}>50%</option>
+              <option value={100}>100%</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              PIC <span className="text-[#ED1E28]">*</span>
+            </label>
+            <select
+              value={formData.pic}
+              onChange={(e) => setFormData({ ...formData, pic: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+            >
+              {DAFTAR_PIC.map((namaPic) => (
+                <option key={namaPic} value={namaPic}>
+                  {namaPic}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Keterangan / Catatan
+            </label>
+            <textarea
+              rows={1}
+              placeholder="Catatan tambahan..."
+              value={formData.keterangan || ''}
+              onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28] focus:h-20 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Dokumen (Opsional)
+            </label>
+            <input
+              type="file"
+              onChange={(e) => setFormData({ ...formData, dokumen: e.target.files?.[0] || null })}
+              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#ED1E28] file:text-white hover:file:bg-[#d41922] cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* Tombol Submit dengan Indikator Visual Loading */}
+        <div className="flex justify-end gap-2 pt-2">
+          {currentTask && !loading && (
+            <button
+              type="button"
               onClick={onReset}
-              disabled={loading}
-              className="px-4 py-2 border border-slate-300 rounded-lg text-xs text-slate-600 hover:bg-slate-100 font-medium cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold cursor-pointer transition-all"
             >
               Batal
             </button>
           )}
           <button
-            type="submit" 
-            disabled={loading}
-            className="px-6 py-2 bg-[#ED1E28] hover:bg-[#c91720] text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
-          >
-            {loading && <Loader2 size={14} className="animate-spin" />}
-            {loading ? 'Mengunggah...' : (currentTask ? 'Update' : 'Upload')}
-          </button>
+  type="submit"
+  onMouseDown={(e) => e.preventDefault()} // Mencegah textarea mencuri klik pertama
+  disabled={loading}
+  className="inline-flex items-center gap-2 px-4 py-2 bg-[#ED1E28] hover:bg-[#d41922] disabled:bg-slate-400 text-white rounded-lg text-xs font-bold cursor-pointer disabled:cursor-not-allowed transition-all shadow-sm"
+>
+  {loading && <Loader2 size={14} className="animate-spin" />}
+  {loading ? 'Menyimpan Data...' : currentTask ? 'Update Target' : 'Tambah Target'}
+</button>
         </div>
       </form>
-    </section>
+    </div>
   );
 }
