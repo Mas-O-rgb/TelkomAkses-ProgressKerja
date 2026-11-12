@@ -1,45 +1,32 @@
-// utils/helpers.ts
-
 export const DAFTAR_PIC = [
-  'ANOM YUDOSENO AJI', 
-  'ANDY AKBAR MAKMUR', 
-  'GHALY QORI MUBAROQ', 
-  'ISHMI KHAFISHAH NASUTION', 
+  'ANOM YUDOSENO AJI',
+  'ANDY AKBAR MAKMUR',
+  'GHALY QORI MUBAROQ',
+  'ISHMI KAFISHAH NASUTION',
   'ARDIANSYAH',
   'NUR FAKHRIZA',
   'SHAKILA LARASATI'
 ];
 
-export const getStatusInfo = (tenggatWaktu: string, progress: number) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const dueDate = new Date(tenggatWaktu);
-  dueDate.setHours(0, 0, 0, 0);
+export const getStatusInfo = (tenggat: string, progress: number) => {
+  const today = new Date().toISOString().split('T')[0];
 
-  // Cek apakah sudah melewati tenggat waktu (dan belum selesai mutlak atau dipaksa overdue)
-  if (today > dueDate) {
-    return {
-      text: 'OVERDUE',
-      className: 'bg-red-100 text-red-700 border border-red-300 font-bold px-2.5 py-1 rounded-full text-[10px]'
-    };
+  // 1. PRIORITAS UTAMA: Jika tanggal hari ini SUDAH MELEWATI tenggat waktu,
+  // maka statusnya TETAP OVERDUE meskipun progress sudah 100%
+  if (tenggat && tenggat < today) {
+    return { text: 'OVERDUE', className: 'bg-red-50 text-red-700 border-red-200' };
   }
 
-  // Jika belum lewat tenggat waktu, cek progress
+  // 2. Jika belum melewati tenggat, baru cek apakah sudah 100%
   if (progress === 100) {
-    return {
-      text: 'SUDAH SELESAI',
-      className: 'bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-full text-[10px]'
-    };
-  } else if (progress > 0) {
-    return {
-      text: 'ON PROGRESS',
-      className: 'bg-amber-100 text-amber-700 font-bold px-2.5 py-1 rounded-full text-[10px]'
-    };
-  } else {
-    return {
-      text: 'BELUM DIKERJAKAN',
-      className: 'bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-full text-[10px]'
-    };
+    return { text: 'SUDAH SELESAI', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
   }
+
+  // 3. Jika sedang dikerjakan (0% < progress < 100%)
+  if (progress > 0) {
+    return { text: 'ON PROGRESS', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+  }
+
+  // 4. Jika belum dikerjakan sama sekali (0%)
+  return { text: 'BELUM DIKERJAKAN', className: 'bg-slate-100 text-slate-600 border-slate-200' };
 };

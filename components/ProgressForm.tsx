@@ -42,6 +42,7 @@ export default function ProgressForm({
     'ISHMI KHAFISHAH NASUTION',
     'SHAKILA LARASATI',
     'ANDY AKBAR MAKMUR',
+    'ARDIANSYAH',
     'GHALY QORI MUBAROQ',
     'ANOM YUDOSENO AJI'
   ];
@@ -68,9 +69,11 @@ export default function ProgressForm({
         {/* Grid Input */}
 
         {/* Kategori */}
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Kategori</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Kategori<span className="text-[#ED1E28]">*</span>
+            </label>
             <input 
               type="text" 
               required
@@ -84,7 +87,9 @@ export default function ProgressForm({
 
           {/* Rincian Target */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Rincian Target</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Rincian Target<span className="text-[#ED1E28]">*</span>
+            </label>
             <input 
               type="text" 
               required
@@ -98,7 +103,9 @@ export default function ProgressForm({
 
           {/* Waktu Mulai */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Waktu Mulai</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Waktu Mulai<span className="text-[#ED1E28]">*</span>
+            </label>
             <input 
               type="date" 
               required
@@ -111,7 +118,9 @@ export default function ProgressForm({
 
           {/* Due Date */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Tenggat Waktu</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+              Due Date<span className="text-[#ED1E28]">*</span>
+            </label>
             <input 
               type="date" 
               required
@@ -139,10 +148,11 @@ export default function ProgressForm({
           </div>
 
           {/* PIC */}
-          {/* KONDISI: Jika ADMIN tampilkan Dropdown PIC. Jika PIC biasa, sembunyikan */}
           {isAdmin ? (
             <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">PIC</label>
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                PIC<span className="text-[#ED1E28]">*</span>
+              </label>
               <select 
                 value={formData.pic}
                 onChange={(e) => setFormData({...formData, pic: e.target.value})}

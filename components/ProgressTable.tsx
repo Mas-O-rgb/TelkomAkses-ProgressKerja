@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Pencil, Trash2, Save, X, FileText, Upload } from 'lucide-react';
+import { DAFTAR_PIC } from '@/utils/helpers';
 
 export interface Task {
   id: number;
@@ -51,19 +52,27 @@ export default function ProgressTable({
     fileDokumen: null,
   });
 
-  const getStatusInfo = (tenggat: string, progress: number) => {
-    if (progress === 100) {
-      return { text: 'SUDAH SELESAI', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    }
-    const today = new Date().toISOString().split('T')[0];
-    if (tenggat && tenggat < today) {
-      return { text: 'OVERDUE', className: 'bg-red-50 text-red-700 border-red-200' };
-    }
-    if (progress > 0) {
-      return { text: 'ON PROGRESS', className: 'bg-amber-50 text-amber-700 border-amber-200' };
-    }
-    return { text: 'BELUM', className: 'bg-slate-100 text-slate-600 border-slate-200' };
-  };
+    const getStatusInfo = (tenggat: string, progress: number) => {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. PRIORITAS UTAMA: Jika tenggat sudah terlewat, status WAJIB OVERDUE walau 100%
+      if (tenggat && tenggat < today) {
+        return { text: 'OVERDUE', className: 'bg-red-50 text-red-700 border-red-200' };
+      }
+
+      // 2. Jika belum lewat, baru cek apakah sudah 100%
+      if (progress === 100) {
+        return { text: 'SUDAH SELESAI', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+      }
+
+      // 3. Jika sedang dikerjakan
+      if (progress > 0) {
+        return { text: 'ON PROGRESS', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+      }
+
+      // 4. Belum dikerjakan
+      return { text: 'BELUM DIKERJAKAN', className: 'bg-slate-100 text-slate-600 border-slate-200' };
+    };
 
   const handleStartEdit = (task: Task) => {
     setEditingId(task.id);
@@ -230,12 +239,17 @@ export default function ProgressTable({
                     {/* PIC */}
                     <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap font-medium">
                       {isEditing && !isPicView ? (
-                        <input
-                          type="text"
+                        <select
                           value={editForm.pic}
                           onChange={(e) => setEditForm({ ...editForm, pic: e.target.value })}
-                          className="w-36 px-1.5 py-0.5 border border-slate-300 rounded text-xs"
-                        />
+                          className="w-36 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#ED1E28]"
+                        >
+                          {DAFTAR_PIC.map((namaPic) => (
+                            <option key={namaPic} value={namaPic}>
+                              {namaPic}
+                            </option>
+                          ))}
+                        </select>
                       ) : (
                         task.pic
                       )}
@@ -257,32 +271,18 @@ export default function ProgressTable({
                     </td>
 
                     {/* Dokumen / Upload Bukti Kerja (Admin & PIC bisa unggah file baru saat edit) */}
-                    <td className="py-2.5 px-3 whitespace-nowrap">
-                      {isEditing ? (
-                        <label className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded cursor-pointer hover:bg-blue-100 text-[11px] font-medium">
-                          <Upload size={12} />
-                          <span>{editForm.fileDokumen ? editForm.fileDokumen.name.slice(0, 12) + '...' : 'Pilih File'}</span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) {
-                                setEditForm({ ...editForm, fileDokumen: e.target.files[0] });
-                              }
-                            }}
-                          />
-                        </label>
-                      ) : task.dokumen && task.dokumen.trim() !== '' && task.dokumen !== 'null' && task.dokumen !== '-' ? (
-                        <a
-                          href={task.dokumen}
-                          target="_blank"
+                    <td className="py-2.5 px-3 text-slate-700 whitespace-nowrap">
+                      {task.dokumen && task.dokumen !== 'Upluad File' && task.dokumen !== '-' ? (
+                        <a 
+                          href={task.dokumen} 
+                          target="_blank" 
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-600 hover:underline font-medium"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded text-xs font-semibold border border-sky-200 transition-all"
                         >
-                          <FileText size={13} /> Buka
+                          <FileText size={12} /> Buka
                         </a>
                       ) : (
-                        <span className="text-slate-400 italic text-[11px]">-</span>
+                        <span className="text-xs text-slate-400 italic">Tidak Ada Dokumen</span>
                       )}
                     </td>
 

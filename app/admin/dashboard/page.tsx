@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import ProgressCharts from '@/components/ProgressCharts';
 import ProgressForm from '@/components/ProgressForm';
@@ -9,7 +9,7 @@ import { getStatusInfo, DAFTAR_PIC } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
 import { ShieldCheck, LogOut } from 'lucide-react';
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [filterKategori, setFilterKategori] = useState('ALL');
@@ -36,31 +36,31 @@ export default function AdminDashboard() {
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (role !== 'admin') {
-      router.push('/'); // Jika bukan admin, baru kembalikan ke login
+      router.push('/');
       return;
     }
     setUserEmail('Administrator');
     fetchTasks();
   }, [router]);
 
-    const fetchTasks = async () => {
-      setLoading(true);
-      const { data } = await supabase.from('progress_targets').select('*').order('id', { ascending: false });
-      if (data) {
-        setTasks(data.map(item => ({
-          id: item.id,
-          kategori: item.kategori,
-          namaTarget: item.nama_target,
-          waktuMulai: item.waktu_mulai,
-          tenggatWaktu: item.tenggat_waktu,
-          progress: item.progress,
-          pic: item.pic,
-          keterangan: item.keterangan || '',
-          dokumen: item.dokumen || 'Upluad File',
-        })));
-      }
-      setLoading(false);
-    };
+  const fetchTasks = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('progress_targets').select('*').order('id', { ascending: false });
+    if (data) {
+      setTasks(data.map(item => ({
+        id: item.id,
+        kategori: item.kategori,
+        namaTarget: item.nama_target,
+        waktuMulai: item.waktu_mulai,
+        tenggatWaktu: item.tenggat_waktu,
+        progress: item.progress,
+        pic: item.pic,
+        keterangan: item.keterangan || '',
+        dokumen: item.dokumen || 'Upluad File',
+      })));
+    }
+    setLoading(false);
+  };
 
   const resetForm = useCallback(() => {
     setCurrentTask(null);
@@ -188,21 +188,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleEdit = (task: any) => {
-    setCurrentTask(task);
-    setFormData({
-      kategori: task.kategori,
-      namaTarget: task.namaTarget,
-      waktuMulai: task.waktuMulai,
-      tenggatWaktu: task.tenggatWaktu,
-      progress: task.progress,
-      pic: task.pic,
-      keterangan: task.keterangan,
-      dokumen: task.dokumen,
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const handleLogout = async () => {
     if (confirm('Apakah Anda yakin ingin keluar?')) {
       await supabase.auth.signOut();
@@ -211,15 +196,29 @@ export default function AdminDashboard() {
     }
   };
 
-  // Kalkulasi Grafik
+  // Kalkulasi Grafik & Status dengan Prioritas Tenggat Lewat (Overdue)
   const statusCounts = tasks.reduce((acc: any, task) => {
-    const statusObj = getStatusInfo(task.tenggatWaktu, task.progress);
-    acc[statusObj.text] = (acc[statusObj.text] || 0) + 1;
+    const today = new Date().toISOString().split('T')[0];
+    let status = 'BELUM DIKERJAKAN';
+
+    // 1. Cek apakah tanggal hari ini sudah melewati tenggat waktu (wajib OVERDUE walau 100%)
+    if (task.tenggatWaktu && task.tenggatWaktu < today) {
+      status = 'OVERDUE';
+    } 
+    // 2. Jika belum lewat, cek apakah sudah 100%
+    else if (task.progress === 100) {
+      status = 'SUDAH SELESAI';
+    } 
+    // 3. Jika sedang dikerjakan
+    else if (task.progress > 0) {
+      status = 'ON PROGRESS';
+    }
+
+    acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
   const pieDataStatusFormatted = Object.keys(statusCounts).map(key => ({ name: key, value: statusCounts[key] }));
   
-  // 2. Kalkulasi Status per PIC untuk Chart 3 (Baru)
   const picStatusMap: { [picName: string]: { [statusText: string]: number } } = {};
   tasks.forEach(task => {
     const picName = task.pic || 'Tanpa PIC';
@@ -252,7 +251,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
+    <div className="min-h-screen text-slate-950 font-sans">
       <header className="bg-slate-900 border-b-4 border-[#ED1E28] shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -279,6 +278,7 @@ export default function AdminDashboard() {
           pieDataKategori={countByField('kategori')} 
           barDataPic={countByField('pic')}
           stackedDataPicStatus={stackedDataPicStatus}
+          tasks={tasks}
         />
 
         {/* Form Input / Edit Target untuk Admin */}
@@ -289,7 +289,7 @@ export default function AdminDashboard() {
           onSubmit={handleSubmit}
           onReset={resetForm}
           loading={isSubmitting}
-          isAdmin={true}  // agar dropdown PIC muncul khusus di Admin */
+          isAdmin={true}
         />
 
         {loading ? (
@@ -307,5 +307,13 @@ export default function AdminDashboard() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-xs">Memuat Panel Admin...</div>}>
+      <AdminDashboardContent />
+    </Suspense>
   );
 }
