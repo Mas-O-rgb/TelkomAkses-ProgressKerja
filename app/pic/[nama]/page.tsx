@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ProgressCharts from '@/components/ProgressCharts';
 import ProgressTable, { Task } from '@/components/ProgressTable';
@@ -8,7 +8,7 @@ import { getStatusInfo } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
 import { UserCheck, LogOut, ArrowLeft } from 'lucide-react';
 
-export default function PicDynamicDashboard() {
+function PicDashboardContent() {
   const params = useParams();
   const router = useRouter();
   
@@ -51,11 +51,9 @@ export default function PicDynamicDashboard() {
     }
   }, [picName, fetchTasksForPIC]);
 
-  // Fungsi simpan update progress & unggah dokumen bukti kerja PIC
   const handleUpdateTask = async (updatedTask: Task) => {
     let dokumenUrl = updatedTask.dokumen;
 
-    // Jika PIC memilih file baru saat menekan Update
     if (updatedTask.fileDokumen) {
       const file = updatedTask.fileDokumen;
       const fileExt = file.name.split('.').pop();
@@ -77,11 +75,10 @@ export default function PicDynamicDashboard() {
       dokumenUrl = publicUrlData.publicUrl;
     }
 
-    // Simpan perubahan ke database Supabase
     const { error } = await supabase
       .from('progress_targets')
       .update({
-        nama_target: updatedTask.namaTarget, // <--- Tambahkan baris ini agar perubahan Rincian Target tersimpan
+        nama_target: updatedTask.namaTarget,
         progress: updatedTask.progress,
         keterangan: updatedTask.keterangan,
         dokumen: dokumenUrl,
@@ -100,7 +97,6 @@ export default function PicDynamicDashboard() {
     router.push('/');
   };
 
-  // Kalkulasi Grafik Pie untuk PIC
   const statusCounts = tasks.reduce((acc: any, task) => {
     const statusObj = getStatusInfo(task.tenggatWaktu, task.progress);
     acc[statusObj.text] = (acc[statusObj.text] || 0) + 1;
@@ -156,16 +152,24 @@ export default function PicDynamicDashboard() {
           <div className="text-center py-8 text-slate-500 text-sm">Memuat data target...</div>
         ) : (
           <ProgressTable 
-							tasks={tasks}
-							filterKategori={filterKategori}
-							setFilterKategori={setFilterKategori}
-							searchTerm={searchTerm}
-							setSearchTerm={setSearchTerm}
-							onUpdateTask={handleUpdateTask}
-							isPicView={true} // <--- WAJIB ADA agar tanggal Mulai, Tenggat, & Hapus terkunci di PIC
-						/>
+            tasks={tasks}
+            filterKategori={filterKategori}
+            setFilterKategori={setFilterKategori}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            onUpdateTask={handleUpdateTask}
+            isPicView={true}
+          />
         )}
       </main>
     </div>
+  );
+}
+
+export default function PicDynamicDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-xs">Memuat halaman PIC...</div>}>
+      <PicDashboardContent />
+    </Suspense>
   );
 }
