@@ -1,138 +1,91 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
-import { User, Lock, Loader2 } from 'lucide-react';
+import { ShieldCheck, UserCheck } from 'lucide-react';
+import { DAFTAR_PIC } from '@/utils/helpers';
 
 export default function LoginPage() {
-  const [identifier, setIdentifier] = useState(''); // Bisa diisi Username atau Email
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  // Handler saat Admin dipilih
+  const handleLoginAdmin = () => {
+    sessionStorage.setItem('userRole', 'admin');
+    sessionStorage.setItem('userName', 'Administrator');
+    router.push('/admin/dashboard');
+  };
 
-    try {
-      let targetEmail = identifier.trim();
-
-      // Cek apakah input BUKAN email (tidak mengandung karakter '@')
-      if (!targetEmail.includes('@')) {
-        // Cari email di tabel profiles berdasarkan username
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('email, role, nama_pic, username')
-          .eq('username', targetEmail)
-          .single();
-
-        if (profileError || !profileData) {
-          alert('Login gagal: Username tidak ditemukan.');
-          setLoading(false);
-          return;
-        }
-
-        targetEmail = profileData.email; // Ambil email aslinya dari database
-      }
-
-      // Lakukan login ke Supabase Auth menggunakan email yang valid
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: targetEmail,
-        password,
-      });
-
-      if (authError || !authData.user) {
-        alert('Login gagal: Password salah atau akun tidak valid.');
-        setLoading(false);
-        return;
-      }
-
-      // Ambil role pengguna dari tabel profiles untuk pengarahan halaman
-      const { data: profileData, error: roleError } = await supabase
-        .from('profiles')
-        .select('role, nama_pic, username')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (roleError || !profileData) {
-        alert('Gagal mengambil data hak akses pengguna.');
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
-      // Arahkan halaman berdasarkan role ('admin' atau 'pic')
-      if (profileData.role === 'admin') {
-        router.push('/admin/dashboard');
-      } else if (profileData.role === 'pic') {
-        sessionStorage.setItem('loggedInPic', profileData.nama_pic || profileData.username);
-        router.push('/pic/dashboard');
-      } else {
-        alert('Role akun tidak dikenali.');
-        await supabase.auth.signOut();
-      }
-    } catch (err) {
-      console.error('Terjadi kesalahan:', err);
-      alert('Terjadi kesalahan sistem saat login.');
-    } finally {
-      setLoading(false);
-    }
+  // Handler saat PIC dipilih
+  const handleLoginPIC = (picName: string) => {
+    // Mengarahkan ke rute dinamis /pic/NAMA_PIC
+    router.push(`/pic/${encodeURIComponent(picName)}`);
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-8 border-t-4 border-[#ED1E28]">
-        <div className="text-center mb-6">
-          <div className="bg-[#ED1E28] text-white w-12 h-12 rounded-xl flex items-center justify-center font-black mx-auto mb-3 text-xl shadow">
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-100">
+      {/* Background Glow */}
+      <div className="absolute w-[500px] h-[500px] bg-[#ED1E28]/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="w-full max-w-4xl relative z-10 space-y-8">
+        
+        {/* Header Judul */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center bg-[#ED1E28] text-white p-3 rounded-2xl font-black text-2xl tracking-wider shadow-lg mb-2">
             TA
           </div>
-          <h1 className="text-xl font-bold text-slate-900">TELKOM AKSES</h1>
-          <p className="text-xs text-slate-500 mt-1">Login Email atau Username</p>
+          <h1 className="text-2xl font-bold tracking-wide">TELKOM AKSES</h1>
+          <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
+            <ShieldCheck size={14} className="text-[#ED1E28]" /> Pilih Akses Masuk Sesuai Peran Anda
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email / Username</label>
-            <div className="relative">
-              <User size={14} className="absolute left-3.5 top-3 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Ketik email atau username..."
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#ED1E28]"
-                required
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Password</label>
-            <div className="relative">
-              <Lock size={14} className="absolute left-3.5 top-3 text-slate-400" />
-              <input 
-                type="password" 
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#ED1E28]"
-                required
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 py-2.5 bg-[#ED1E28] hover:bg-[#c91720] text-white rounded-lg text-xs font-semibold shadow transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+        {/* Grid Kartu Login (Admin & PIC) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          
+          {/* Tombol Kartu Admin */}
+          <button
+            onClick={handleLoginAdmin}
+            className="group relative bg-[#ED1E28] hover:bg-[#d91922] p-8 rounded-2xl shadow-xl transition-all duration-200 transform hover:-translate-y-1 flex flex-col items-center justify-center text-center cursor-pointer border border-red-400/30"
           >
-            {loading && <Loader2 size={14} className="animate-spin" />}
-            {loading ? 'Memverifikasi...' : 'Masuk'}
+            <div className="bg-white/10 p-3 rounded-xl mb-4 text-white group-hover:scale-110 transition-transform">
+              <ShieldCheck size={32} />
+            </div>
+            <span className="text-lg font-black tracking-wider uppercase text-white">
+              Admin
+            </span>
+            <span className="text-xs text-white/80 mt-1">
+              Kontrol & Kelola Semua Target
+            </span>
           </button>
-        </form>
+
+          {/* Tombol Kartu Daftar PIC (Muncul otomatis sesuai data di DAFTAR_PIC) */}
+          {DAFTAR_PIC.map((picName, index) => (
+            <button
+              key={index}
+              onClick={() => handleLoginPIC(picName)}
+              className="group relative bg-slate-900 hover:bg-slate-800 p-8 rounded-2xl shadow-xl transition-all duration-200 transform hover:-translate-y-1 flex flex-col items-center justify-center text-center cursor-pointer border border-slate-800 hover:border-slate-700"
+            >
+              <div className="bg-slate-800 p-3 rounded-xl mb-4 text-slate-400 group-hover:text-white group-hover:bg-[#ED1E28] group-hover:scale-110 transition-all">
+                <UserCheck size={32} />
+              </div>
+              <span className="text-sm font-bold tracking-wide text-slate-200 group-hover:text-white line-clamp-2">
+                {picName}
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1">
+                PIC Dashboard
+              </span>
+            </button>
+          ))}
+
+        </div>
+
+        {/* Footer */}
+        <div className="text-center pt-4 border-t border-slate-900">
+          <p className="text-xs text-slate-500">
+            &copy; 2026 PT Telkom Akses. Sistem Monitoring Progress Kerja.
+          </p>
+        </div>
+
       </div>
     </div>
   );

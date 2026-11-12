@@ -10,6 +10,7 @@ interface TaskFormState {
   tenggatWaktu: string;
   progress: number;
   pic: string;
+  keterangan: string;
   dokumen: any;
 }
 
@@ -65,6 +66,8 @@ export default function ProgressForm({
 
       <form onSubmit={onSubmit} className="p-6 space-y-4">
         {/* Grid Input */}
+
+        {/* Kategori */}
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Kategori</label>
@@ -79,6 +82,7 @@ export default function ProgressForm({
             />
           </div>
 
+          {/* Rincian Target */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Rincian Target</label>
             <input 
@@ -92,6 +96,7 @@ export default function ProgressForm({
             />
           </div>
 
+          {/* Waktu Mulai */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Waktu Mulai</label>
             <input 
@@ -104,6 +109,7 @@ export default function ProgressForm({
             />
           </div>
 
+          {/* Due Date */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Tenggat Waktu</label>
             <input 
@@ -116,6 +122,8 @@ export default function ProgressForm({
             />
           </div>
 
+
+          {/* Progress */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Progress (%)</label>
             <select 
@@ -130,6 +138,7 @@ export default function ProgressForm({
             </select>
           </div>
 
+          {/* PIC */}
           {/* KONDISI: Jika ADMIN tampilkan Dropdown PIC. Jika PIC biasa, sembunyikan */}
           {isAdmin ? (
             <div>
@@ -150,6 +159,18 @@ export default function ProgressForm({
           ) : (
             <input type="hidden" name="pic" value={formData.pic} />
           )}
+
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Keterangan (Opsional)</label>
+            <input 
+              type="text" 
+              placeholder="Ketik keterangan tambahan..."
+              value={formData.keterangan || ''}
+              onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
+              className={inputStyle}
+              disabled={loading}
+            />
+          </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Dokumen (Opsional)</label>

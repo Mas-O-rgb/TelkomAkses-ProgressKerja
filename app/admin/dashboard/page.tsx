@@ -26,6 +26,7 @@ export default function AdminDashboard() {
     tenggatWaktu: '',
     progress: 0,
     pic: DAFTAR_PIC[0],
+    keterangan: '',
     dokumen: null as any,
   };
 
@@ -33,50 +34,33 @@ export default function AdminDashboard() {
 
   // Verifikasi Sesi Autentikasi Admin
   useEffect(() => {
-    const checkAdminAuth = async () => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        router.push('/');
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || profile?.role !== 'admin') {
-        await supabase.auth.signOut();
-        router.push('/');
-        return;
-      }
-
-      setUserEmail(user.email || 'Admin');
-      fetchTasks();
-    };
-
-    checkAdminAuth();
+    const role = sessionStorage.getItem('userRole');
+    if (role !== 'admin') {
+      router.push('/'); // Jika bukan admin, baru kembalikan ke login
+      return;
+    }
+    setUserEmail('Administrator');
+    fetchTasks();
   }, [router]);
 
-  const fetchTasks = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('progress_targets').select('*').order('id', { ascending: false });
-    if (data) {
-      setTasks(data.map(item => ({
-        id: item.id,
-        kategori: item.kategori,
-        namaTarget: item.nama_target,
-        waktuMulai: item.waktu_mulai,
-        tenggatWaktu: item.tenggat_waktu,
-        progress: item.progress,
-        pic: item.pic,
-        dokumen: item.dokumen || 'Dokumen.pdf',
-      })));
-    }
-    setLoading(false);
-  };
+    const fetchTasks = async () => {
+      setLoading(true);
+      const { data } = await supabase.from('progress_targets').select('*').order('id', { ascending: false });
+      if (data) {
+        setTasks(data.map(item => ({
+          id: item.id,
+          kategori: item.kategori,
+          namaTarget: item.nama_target,
+          waktuMulai: item.waktu_mulai,
+          tenggatWaktu: item.tenggat_waktu,
+          progress: item.progress,
+          pic: item.pic,
+          keterangan: item.keterangan || '',
+          dokumen: item.dokumen || 'Upluad File',
+        })));
+      }
+      setLoading(false);
+    };
 
   const resetForm = useCallback(() => {
     setCurrentTask(null);
@@ -128,6 +112,7 @@ export default function AdminDashboard() {
         tenggat_waktu: formData.tenggatWaktu,
         progress: formData.progress,
         pic: formData.pic,
+        keterangan: formData.keterangan,
         dokumen: dokumenUrl,
       };
 
@@ -143,6 +128,51 @@ export default function AdminDashboard() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateTask = async (updatedTask: any) => {
+    let dokumenUrl = updatedTask.dokumen;
+
+    if (updatedTask.fileDokumen) {
+      const file = updatedTask.fileDokumen;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `admin_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('dokumen-progress')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        alert('Gagal mengunggah dokumen: ' + uploadError.message);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('dokumen-progress')
+        .getPublicUrl(fileName);
+
+      dokumenUrl = publicUrlData.publicUrl;
+    }
+
+    const { error } = await supabase
+      .from('progress_targets')
+      .update({
+        kategori: updatedTask.kategori,
+        nama_target: updatedTask.namaTarget,
+        waktu_mulai: updatedTask.waktuMulai,
+        tenggat_waktu: updatedTask.tenggatWaktu,
+        progress: updatedTask.progress,
+        pic: updatedTask.pic,
+        keterangan: updatedTask.keterangan,
+        dokumen: dokumenUrl,
+      })
+      .eq('id', updatedTask.id);
+
+    if (error) {
+      alert('Gagal memperbarui data: ' + error.message);
+    } else {
+      await fetchTasks();
     }
   };
 
@@ -167,6 +197,7 @@ export default function AdminDashboard() {
       tenggatWaktu: task.tenggatWaktu,
       progress: task.progress,
       pic: task.pic,
+      keterangan: task.keterangan,
       dokumen: task.dokumen,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -187,6 +218,29 @@ export default function AdminDashboard() {
     return acc;
   }, {});
   const pieDataStatusFormatted = Object.keys(statusCounts).map(key => ({ name: key, value: statusCounts[key] }));
+  
+  // 2. Kalkulasi Status per PIC untuk Chart 3 (Baru)
+  const picStatusMap: { [picName: string]: { [statusText: string]: number } } = {};
+  tasks.forEach(task => {
+    const picName = task.pic || 'Tanpa PIC';
+    const statusObj = getStatusInfo(task.tenggatWaktu, task.progress);
+    const statusText = statusObj.text; 
+
+    if (!picStatusMap[picName]) {
+      picStatusMap[picName] = {
+        'BELUM DIKERJAKAN': 0,
+        'ON PROGRESS': 0,
+        'OVERDUE': 0,
+        'SUDAH SELESAI': 0,
+      };
+    }
+    picStatusMap[picName][statusText] = (picStatusMap[picName][statusText] || 0) + 1;
+  });
+
+  const stackedDataPicStatus = Object.keys(picStatusMap).map(picName => ({
+    name: picName,
+    ...picStatusMap[picName],
+  }));
 
   const countByField = (field: string) => {
     const counts = tasks.reduce((acc: any, task) => {
@@ -219,11 +273,12 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <main className="max-w-[96%] mx-auto px-0 py-8 space-y-8">
         <ProgressCharts 
           pieDataStatus={pieDataStatusFormatted} 
           pieDataKategori={countByField('kategori')} 
-          barDataPic={countByField('pic')} 
+          barDataPic={countByField('pic')}
+          stackedDataPicStatus={stackedDataPicStatus}
         />
 
         {/* Form Input / Edit Target untuk Admin */}
@@ -246,7 +301,7 @@ export default function AdminDashboard() {
             setFilterKategori={setFilterKategori}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            onEdit={handleEdit}
+            onUpdateTask={handleUpdateTask}
             onDelete={handleDelete}
           />
         )}

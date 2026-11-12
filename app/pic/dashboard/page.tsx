@@ -63,6 +63,7 @@ export default function PicDashboard() {
     tenggatWaktu: '',
     progress: 0,
     pic: loggedInPic,
+    keterangan: '',
     dokumen: null as any,
   };
 
@@ -124,6 +125,7 @@ export default function PicDashboard() {
       tenggatWaktu: task.tenggatWaktu,
       progress: task.progress,
       pic: task.pic,
+      keterangan: task.keterangan,
       dokumen: task.dokumen,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
