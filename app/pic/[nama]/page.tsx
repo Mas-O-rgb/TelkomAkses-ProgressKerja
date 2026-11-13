@@ -7,6 +7,8 @@ import ProgressTable, { Task } from '@/components/ProgressTable';
 import { getStatusInfo } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
 import { UserCheck, LogOut, ArrowLeft } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 function PicDashboardContent() {
   const params = useParams();
@@ -18,6 +20,27 @@ function PicDashboardContent() {
   const [filterKategori, setFilterKategori] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [greeting, setGreeting] =useState('Selamat Datang');
+
+  // 1. Logika Penentuan Waktu Real-Time untuk PIC
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour >= 4 && hour < 11) {
+        setGreeting('Selamat Pagi');
+      } else if (hour >= 11 && hour < 15) {
+        setGreeting('Selamat Siang');
+      } else if (hour >= 15 && hour < 18) {
+        setGreeting('Selamat Sore');
+      } else {
+        setGreeting('Selamat Malam');
+      }
+    };
+
+    updateGreeting();
+    const interval = setInterval(updateGreeting, 60000); // Perbarui tiap 1 menit
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchTasksForPIC = useCallback(async () => {
     if (!picName) return;
@@ -114,39 +137,15 @@ function PicDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
-      <header className="bg-slate-900 border-b-4 border-[#ED1E28] shadow-md">
-        <div className="max-w-[96%] mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => router.push('/')}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer transition-all"
-              title="Kembali ke Pilih Akun"
-            >
-              <ArrowLeft size={16} />
-            </button>
-            <div className="bg-[#ED1E28] text-white px-2.5 py-1.5 rounded-lg font-black tracking-wider text-sm">PIC</div>
-            <div>
-              <h1 className="text-base font-bold text-white uppercase">{picName}</h1>
-              <p className="text-xs text-slate-400 flex items-center gap-1">
-                <UserCheck size={12} className="text-[#ED1E28]" /> Panel Dasbor Penanggung Jawab
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
-          >
-            <LogOut size={14} /> Ganti Akun
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
+      <Header 
+        title="TELKOM AKSES" 
+        subtitle={`${greeting}, ${picName}`} 
+        role="pic" 
+        onLogout={handleLogout} 
+      />
 
-      <main className="max-w-[96%] mx-auto px-0 py-8 space-y-8">
-        <ProgressCharts 
-          pieDataStatus={pieDataStatusFormatted} 
-          pieDataKategori={countByField('kategori')} 
-        />
+      <main className="max-w-[96%] mx-auto px-0 pt-24 pb-12 space-y-8 flex-1 w-full">
 
         {loading ? (
           <div className="text-center py-8 text-slate-500 text-sm">Memuat data target...</div>
@@ -161,7 +160,9 @@ function PicDashboardContent() {
             isPicView={true}
           />
         )}
+
       </main>
+      <Footer />
     </div>
   );
 }

@@ -97,7 +97,15 @@ export default function ProgressForm({
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
             >
               <option value={0}>0%</option>
+              <option value={10}>10%</option>
+              <option value={20}>20%</option>
+              <option value={30}>30%</option>
+              <option value={40}>40%</option>
               <option value={50}>50%</option>
+              <option value={60}>60%</option>
+              <option value={70}>70%</option>
+              <option value={80}>80%</option>
+              <option value={90}>90%</option>
               <option value={100}>100%</option>
             </select>
           </div>
@@ -156,14 +164,14 @@ export default function ProgressForm({
             </button>
           )}
           <button
-  type="submit"
-  onMouseDown={(e) => e.preventDefault()} // Mencegah textarea mencuri klik pertama
-  disabled={loading}
-  className="inline-flex items-center gap-2 px-4 py-2 bg-[#ED1E28] hover:bg-[#d41922] disabled:bg-slate-400 text-white rounded-lg text-xs font-bold cursor-pointer disabled:cursor-not-allowed transition-all shadow-sm"
->
-  {loading && <Loader2 size={14} className="animate-spin" />}
-  {loading ? 'Menyimpan Data...' : currentTask ? 'Update Target' : 'Tambah Target'}
-</button>
+            type="submit"
+            onMouseDown={(e) => e.preventDefault()} // Mencegah textarea mencuri klik pertama
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#ED1E28] hover:bg-[#d41922] disabled:bg-slate-400 text-white rounded-lg text-xs font-bold cursor-pointer disabled:cursor-not-allowed transition-all shadow-sm"
+          >
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading ? 'Menyimpan Data...' : currentTask ? 'Update Target' : 'Tambah Target'}
+          </button>
         </div>
       </form>
     </div>

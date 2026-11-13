@@ -8,6 +8,8 @@ import ProgressTable from '@/components/ProgressTable';
 import { getStatusInfo, DAFTAR_PIC } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
 import { ShieldCheck, LogOut } from 'lucide-react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 function AdminDashboardContent() {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -18,6 +20,41 @@ function AdminDashboardContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const router = useRouter();
+
+  const [adminName, setAdminName] = useState('Administrator');
+  const [greeting, setGreeting] = useState('Selamat Datang');
+
+// Ambil Nama Admin dari Session & Tentukan Sapaan Waktu Real-Time
+  useEffect(() => {
+    const storedName = sessionStorage.getItem('userName');
+    if (storedName) {
+      setAdminName(storedName);
+    }
+
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour >= 4 && hour < 11) {
+        setGreeting('Selamat Pagi');
+      } else if (hour >= 11 && hour < 15) {
+        setGreeting('Selamat Siang');
+      } else if (hour >= 15 && hour < 18) {
+        setGreeting('Selamat Sore');
+      } else {
+        setGreeting('Selamat Malam');
+      }
+    };
+
+    updateGreeting();
+    const interval = setInterval(updateGreeting, 60000); // Cek tiap menit
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const storedName = sessionStorage.getItem('userName');
+    if (storedName) {
+      setAdminName(storedName);
+    }
+  }, []);
 
   const initialFormState = {
     kategori: '',
@@ -188,12 +225,9 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleLogout = async () => {
-    if (confirm('Apakah Anda yakin ingin keluar?')) {
-      await supabase.auth.signOut();
-      sessionStorage.clear();
-      router.push('/');
-    }
+  const handleLogout = () => {
+    sessionStorage.clear();
+    router.push('/');
   };
 
   // Kalkulasi Grafik & Status dengan Prioritas Tenggat Lewat (Overdue)
@@ -251,28 +285,17 @@ function AdminDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen text-slate-950 font-sans">
-      <header className="bg-slate-900 border-b-4 border-[#ED1E28] shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#ED1E28] text-white p-2 rounded-lg font-black tracking-wider text-xl">TA</div>
-            <div>
-              <h1 className="text-xl font-bold text-white">TELKOM AKSES</h1>
-              <p className="text-xs text-slate-400 flex items-center gap-1">
-                <ShieldCheck size={12} className="text-[#ED1E28]" /> Panel Kontrol Admin ({userEmail})
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
-          >
-            <LogOut size={14} /> Keluar
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
+      {/** Header */}
+      <Header 
+      title="Monitoring Progress Kerja" 
+      subtitle={`${greeting}, ${adminName}`} 
+      role="admin" 
+      onLogout={handleLogout} 
+      />
+      {/** Header */}
 
-      <main className="max-w-[96%] mx-auto px-0 py-8 space-y-8">
+      <main className="max-w-[96%] mx-auto px-0 pt-24 pb-12 space-y-8 flex-1 w-full">
         <ProgressCharts 
           pieDataStatus={pieDataStatusFormatted} 
           pieDataKategori={countByField('kategori')} 
@@ -306,6 +329,7 @@ function AdminDashboardContent() {
           />
         )}
       </main>
+      <Footer />
     </div>
   );
 }
