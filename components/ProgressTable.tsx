@@ -219,18 +219,31 @@ export default function ProgressTable({
                     </td>
 
                     {/* Progress */}
-                    <td className="py-2.5 px-2 text-center font-bold text-slate-700">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
+                    <td className="py-2.5 px-2">
+                      {editingId === task.id ? (
+                        // JIKA DALAM MODE EDIT: Tampilkan Dropdown
+                        <select
                           value={editForm.progress}
                           onChange={(e) => setEditForm({ ...editForm, progress: Number(e.target.value) })}
-                          className="w-14 px-1.5 py-1 bg-white border border-slate-300 rounded text-xs text-center"
-                        />
+                          className="w-full p-1.5 border border-slate-300 rounded-lg bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#ED1E28]"
+                        >
+                          <option value={0}>0%</option>
+                          <option value={10}>10%</option>
+                          <option value={20}>20%</option>
+                          <option value={30}>30%</option>
+                          <option value={40}>40%</option>
+                          <option value={50}>50%</option>
+                          <option value={60}>60%</option>
+                          <option value={70}>70%</option>
+                          <option value={80}>80%</option>
+                          <option value={90}>90%</option>
+                          <option value={100}>100%</option>
+                        </select>
                       ) : (
-                        `${task.progress}%`
+                        // JIKA TIDAK DIEDIT: Tampilkan sebagai Teks/Badge biasa
+                        <span className="font-semibold text-slate-700">
+                          {task.progress}%
+                        </span>
                       )}
                     </td>
 
