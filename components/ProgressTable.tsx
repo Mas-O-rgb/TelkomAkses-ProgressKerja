@@ -60,7 +60,6 @@ export default function ProgressTable({
 
   const uniqueCategories = Array.from(new Set(tasks.map((t) => t.kategori).filter(Boolean)));
 
-  // Filter data berdasarkan kategori dan pencarian
   const filteredTasks = tasks.filter((task) => {
     const matchKategori = filterKategori === 'ALL' || task.kategori === filterKategori;
     const keyword = searchTerm.toLowerCase();
@@ -71,7 +70,6 @@ export default function ProgressTable({
     return matchKategori && matchSearch;
   });
 
-  // Logika Paginasi (25 baris per halaman)
   const totalPages = Math.max(1, Math.ceil(filteredTasks.length / ITEMS_PER_PAGE));
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
@@ -122,13 +120,13 @@ export default function ProgressTable({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-[11px]">
       {/* Baris Filter & Pencarian */}
-      <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50">
+      <div className="p-3 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 bg-slate-50/50">
         <select
           value={filterKategori}
           onChange={(e) => handleFilterChange(e.target.value)}
-          className="w-full sm:w-48 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
+          className="w-full sm:w-44 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
         >
           <option value="ALL">Semua Kategori</option>
           {uniqueCategories.map((kat) => (
@@ -143,26 +141,26 @@ export default function ProgressTable({
           placeholder="Cari target atau PIC..."
           value={searchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full sm:w-64 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
+          className="w-full sm:w-60 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
         />
       </div>
 
       {/* Tabel Data */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs table-auto">
+        <table className="w-full text-left border-collapse table-auto">
           <thead>
             <tr className="bg-slate-100 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
-              <th className="py-2.5 px-2 text-center w-12">No</th>
-              <th className="py-2.5 px-2 text-left w-20">Kategori</th>
-              <th className="py-2.5 px-2 text-left min-w-[180px] max-w-[240px]">Rincian Target</th>
-              <th className="py-2.5 px-2 text-left w-28">Mulai</th>
-              <th className="py-2.5 px-2 text-left w-28">Due Date</th>
-              <th className="py-2.5 px-2 text-center w-20">Progress</th>
-              <th className="py-2.5 px-2 text-center w-28">Status</th>
-              <th className="py-2.5 px-2 text-left w-36">PIC</th>
-              <th className="py-2.5 px-2 text-left min-w-[220px]">Keterangan</th>
-              <th className="py-2.5 px-2 text-left w-28">Dokumen</th>
-              <th className="py-2.5 px-2 text-center w-28">Aksi</th>
+              <th className="py-2 px-1.5 text-center w-10">No</th>
+              <th className="py-2 px-1.5 text-left w-20">Kategori</th>
+              <th className="py-2 px-1.5 text-left min-w-[180px]">Rincian Target</th>
+              <th className="py-2 px-1.5 text-center w-24">Waktu Mulai</th>
+              <th className="py-2 px-1.5 text-center w-24">Due Date</th>
+              <th className="py-2 px-1.5 text-center w-16">Progress</th>
+              <th className="py-2 px-1.5 text-center w-24">Status</th>
+              <th className="py-2 px-1.5 text-center w-44">PIC</th>
+              <th className="py-2 px-1.5 text-left min-w-[160px]">Keterangan</th>
+              <th className="py-2 px-1.5 text-left w-24">Dokumen</th>
+              <th className="py-2 px-1.5 text-center w-24">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -178,48 +176,48 @@ export default function ProgressTable({
 
                 return (
                   <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-2 text-center text-slate-500">{absoluteIndex}</td>
+                    <td className="py-2 px-1.5 text-center text-slate-500">{absoluteIndex}</td>
 
                     {/* Kategori */}
-                    <td className="py-2.5 px-2 font-semibold text-slate-700">
+                    <td className="py-2 px-1.5 font-semibold text-slate-700">
                       {isEditing && !isPicView ? (
                         <input
                           type="text"
                           value={editForm.kategori}
                           onChange={(e) => setEditForm({ ...editForm, kategori: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-white border border-slate-300 rounded text-xs"
+                          className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[11px]"
                         />
                       ) : (
-                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[11px] border border-slate-200 inline-block">
+                        <span className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 inline-block">
                           {task.kategori}
                         </span>
                       )}
                     </td>
 
                     {/* Rincian Target */}
-                    <td className="py-2.5 px-2 font-medium text-slate-900 min-w-[260px]">
+                    <td className="py-2 px-2 font-medium text-slate-900">
                       {isEditing ? (
                         <input
                           type="text"
                           value={editForm.namaTarget}
                           onChange={(e) => setEditForm({ ...editForm, namaTarget: e.target.value })}
-                          className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#ED1E28]"
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-[#ED1E28]"
                         />
                       ) : (
-                        <div className="whitespace-normal break-words leading-relaxed">
+                        <div className="whitespace-normal break-words leading-snug">
                           {task.namaTarget}
                         </div>
                       )}
                     </td>
 
                     {/* Waktu Mulai */}
-                    <td className="py-2.5 px-2 text-slate-600 whitespace-nowrap">
+                    <td className="py-2 px-1.5 text-slate-600 whitespace-nowrap text-center">
                       {isEditing && !isPicView ? (
                         <input
                           type="date"
                           value={editForm.waktuMulai}
                           onChange={(e) => setEditForm({ ...editForm, waktuMulai: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-white border border-slate-300 rounded text-[11px]"
+                          className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[10px]"
                         />
                       ) : (
                         task.waktuMulai
@@ -227,13 +225,13 @@ export default function ProgressTable({
                     </td>
 
                     {/* Tenggat Waktu */}
-                    <td className="py-2.5 px-2 text-slate-600 whitespace-nowrap">
+                    <td className="py-2 px-1.5 text-slate-600 whitespace-nowrap text-center">
                       {isEditing && !isPicView ? (
                         <input
                           type="date"
                           value={editForm.tenggatWaktu}
                           onChange={(e) => setEditForm({ ...editForm, tenggatWaktu: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-white border border-slate-300 rounded text-[11px]"
+                          className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[10px]"
                         />
                       ) : (
                         task.tenggatWaktu
@@ -241,12 +239,12 @@ export default function ProgressTable({
                     </td>
 
                     {/* Progress */}
-                    <td className="py-2.5 px-2">
+                    <td className="py-2 px-1.5 text-center">
                       {isEditing ? (
                         <select
                           value={editForm.progress}
                           onChange={(e) => setEditForm({ ...editForm, progress: Number(e.target.value) })}
-                          className="w-full p-1.5 border border-slate-300 rounded-lg bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#ED1E28]"
+                          className="w-full p-1 border border-slate-300 rounded bg-white text-slate-800 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-[#ED1E28]"
                         >
                           {PROGRESS_OPTIONS.map((val) => (
                             <option key={val} value={val}>
@@ -260,19 +258,19 @@ export default function ProgressTable({
                     </td>
 
                     {/* Status */}
-                    <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusInfo.className}`}>
+                    <td className="py-2 px-1.5 text-center whitespace-nowrap">
+                      <span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${statusInfo.className}`}>
                         {statusInfo.text}
                       </span>
                     </td>
 
                     {/* PIC */}
-                    <td className="py-2.5 px-2 text-slate-700 font-medium">
+                    <td className="py-2 px-1.5 text-slate-700 font-medium text-center">
                       {isEditing && !isPicView ? (
                         <select
                           value={editForm.pic}
                           onChange={(e) => setEditForm({ ...editForm, pic: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-white border border-slate-300 rounded text-xs"
+                          className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[11px]"
                         >
                           {DAFTAR_PIC.map((namaPic) => (
                             <option key={namaPic} value={namaPic}>
@@ -281,53 +279,53 @@ export default function ProgressTable({
                           ))}
                         </select>
                       ) : (
-                        <span className="whitespace-normal break-words">{task.pic}</span>
+                        <span className="whitespace-normal break-words leading-snug">{task.pic}</span>
                       )}
                     </td>
 
                     {/* Keterangan */}
-                    <td className="py-2.5 px-2 text-slate-600 align-top">
+                    <td className="py-2 px-1.5 text-slate-600 align-top">
                       {isEditing ? (
-                        <div className="relative h-7 w-36">
+                        <div className="relative h-6 w-28">
                           <textarea
                             rows={1}
                             placeholder="Catatan..."
                             value={editForm.keterangan || ''}
                             onChange={(e) => setEditForm({ ...editForm, keterangan: e.target.value })}
-                            className="w-full h-7 focus:absolute focus:top-0 focus:right-0 focus:w-72 focus:h-24 px-2 py-1 bg-white border border-slate-300 rounded text-xs transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28] resize-none z-20 shadow-sm focus:shadow-lg"
+                            className="w-full h-6 focus:absolute focus:top-0 focus:right-0 focus:w-60 focus:h-20 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[11px] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[#ED1E28] resize-none z-20 shadow-sm"
                           />
                         </div>
                       ) : (
-                        <div className="whitespace-pre-wrap break-words text-xs text-slate-700 leading-relaxed max-w-[200px]">
+                        <div className="whitespace-pre-wrap break-words text-[11px] text-slate-700 leading-snug">
                           {task.keterangan || <span className="text-slate-400 italic">-</span>}
                         </div>
                       )}
                     </td>
 
                     {/* Dokumen */}
-                    <td className="py-2.5 px-2 text-slate-700">
+                    <td className="py-2 px-1.5 text-slate-700">
                       {isEditing ? (
                         <input
                           type="file"
                           onChange={(e) => setEditForm({ ...editForm, fileDokumen: e.target.files?.[0] || null })}
-                          className="w-32 text-[10px] text-slate-600 file:mr-1 file:py-0.5 file:px-1.5 file:rounded file:border-0 file:bg-slate-200 file:text-slate-700 cursor-pointer"
+                          className="w-28 text-[9px] text-slate-600 file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:bg-slate-200 file:text-slate-700 cursor-pointer"
                         />
                       ) : task.dokumen && task.dokumen !== 'Upluad File' && task.dokumen !== '-' ? (
                         <a
                           href={task.dokumen}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 text-sky-700 rounded text-xs font-semibold border border-sky-200 hover:bg-sky-100"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-sky-50 text-sky-700 rounded text-[10px] font-semibold border border-sky-200 hover:bg-sky-100"
                         >
-                          <FileText size={12} /> Buka
+                          <FileText size={11} /> Buka
                         </a>
                       ) : (
-                        <span className="text-[11px] text-slate-400 italic">Tidak Ada Dokumen</span>
+                        <span className="text-[10px] text-slate-400 italic">Tidak Ada Dokumen</span>
                       )}
                     </td>
 
                     {/* Aksi */}
-                    <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                    <td className="py-2 px-1.5 text-center whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
                         {isEditing ? (
                           <>
@@ -336,25 +334,25 @@ export default function ProgressTable({
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={handleSaveEdit}
                               disabled={isRowLoading}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 disabled:opacity-60 cursor-pointer transition-all"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 disabled:opacity-60 cursor-pointer transition-all text-[10px]"
                               title="Simpan"
                             >
                               {isRowLoading ? (
                                 <>
-                                  <Loader2 size={13} className="animate-spin" />
-                                  <span className="text-[11px] font-semibold">Menyimpan...</span>
+                                  <Loader2 size={11} className="animate-spin" />
+                                  <span>Simpan...</span>
                                 </>
                               ) : (
-                                <Save size={13} />
+                                <Save size={11} />
                               )}
                             </button>
                             {!isRowLoading && (
                               <button
                                 onClick={handleCancelEdit}
-                                className="p-1 text-slate-600 bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 cursor-pointer"
+                                className="p-0.5 text-slate-600 bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 cursor-pointer"
                                 title="Batal"
                               >
-                                <X size={13} />
+                                <X size={11} />
                               </button>
                             )}
                           </>
@@ -363,7 +361,7 @@ export default function ProgressTable({
                             <button
                               onClick={() => handleStartEdit(task)}
                               disabled={isRowLoading}
-                              className="px-2 py-0.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 font-medium disabled:opacity-50 cursor-pointer"
+                              className="px-1.5 py-0.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 font-medium disabled:opacity-50 cursor-pointer text-[10px]"
                             >
                               {isPicView ? 'Update' : 'Edit'}
                             </button>
@@ -372,12 +370,12 @@ export default function ProgressTable({
                               <button
                                 onClick={() => handleDeleteClick(task.id)}
                                 disabled={isRowLoading}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-red-600 bg-red-50 rounded hover:bg-red-100 font-medium disabled:opacity-60 cursor-pointer transition-all"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 text-red-600 bg-red-50 rounded hover:bg-red-100 font-medium disabled:opacity-60 cursor-pointer transition-all text-[10px]"
                               >
                                 {isRowLoading ? (
                                   <>
-                                    <Loader2 size={12} className="animate-spin" />
-                                    <span>Menghapus...</span>
+                                    <Loader2 size={11} className="animate-spin" />
+                                    <span>Hapus</span>
                                   </>
                                 ) : (
                                   'Hapus'
@@ -403,7 +401,7 @@ export default function ProgressTable({
       </div>
 
       {/* Kontrol Navigasi Paginasi */}
-      <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50 text-xs text-slate-600">
+      <div className="p-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 bg-slate-50/50 text-[11px] text-slate-600">
         <div>
           Menampilkan <span className="font-semibold">{filteredTasks.length > 0 ? indexOfFirstItem + 1 : 0}</span> sampai{' '}
           <span className="font-semibold">{Math.min(indexOfLastItem, filteredTasks.length)}</span> dari{' '}
@@ -414,21 +412,21 @@ export default function ProgressTable({
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
           >
-            <ChevronLeft size={14} /> Sebelumnya
+            <ChevronLeft size={13} /> Sebelumnya
           </button>
 
-          <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800">
+          <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800">
             Halaman {currentPage} dari {totalPages}
           </span>
 
           <button
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages || totalPages === 0}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
           >
-            Berikutnya <ChevronRight size={14} />
+            Berikutnya <ChevronRight size={13} />
           </button>
         </div>
       </div>

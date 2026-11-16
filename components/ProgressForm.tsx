@@ -79,7 +79,7 @@ export default function ProgressForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Tenggat Waktu <span className="text-[#ED1E28]">*</span>
+              Due Date <span className="text-[#ED1E28]">*</span>
             </label>
             <input
               type="date"

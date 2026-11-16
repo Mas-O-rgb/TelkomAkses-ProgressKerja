@@ -36,13 +36,6 @@ export default function LoginPage() {
     fetchProfiles();
   }, []);
 
-  // Handler saat Admin Utama / Umum dipilih
-  const handleLoginAdmin = () => {
-    sessionStorage.setItem('userRole', 'admin');
-    sessionStorage.setItem('userName', 'Administrator');
-    router.push('/admin/dashboard');
-  };
-
   // Handler saat Admin spesifik dipilih
   const handleLoginSpecificAdmin = (adminName: string) => {
     sessionStorage.setItem('userRole', 'admin');
