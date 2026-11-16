@@ -109,7 +109,7 @@ function AdminDashboardContent() {
     e.preventDefault();
 
     if (!formData.namaTarget || !formData.waktuMulai || !formData.tenggatWaktu) {
-      alert('Mohon isi Nama Target, Waktu Mulai, dan Tenggat Waktu!');
+      alert('Mohon isi Nama Target, Waktu Mulai, dan Due Date!');
       return;
     }
 
@@ -140,6 +140,18 @@ function AdminDashboardContent() {
           .getPublicUrl(filePath);
 
         dokumenUrl = publicUrlData.publicUrl;
+      }
+
+      // --- TAMBAHKAN KALKULASI STATUS DI SINI UNTUK TAMBAH/INSERT BARU ---
+      const today = new Date().toISOString().split('T')[0];
+      let status = 'ON PROGRESS';
+      
+      if (formData.tenggatWaktu && formData.tenggatWaktu < today) {
+        status = 'OVERDUE';
+      } else if (formData.progress === 100) {
+        status = 'SUDAH SELESAI';
+      } else if (formData.progress === 0) {
+        status = 'BELUM DIKERJAKAN';
       }
 
       const payload = {
