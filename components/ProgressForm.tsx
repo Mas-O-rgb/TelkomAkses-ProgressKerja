@@ -128,7 +128,7 @@ export default function ProgressForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Keterangan / Catatan(Opsional)
+              Keterangan / Catatan <span className="text-[10px] text-slate-400 font-normal ml-0.5 align-baseline">(Opsional)</span>
             </label>
             <textarea
               rows={1}
@@ -141,7 +141,7 @@ export default function ProgressForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Dokumen (Opsional)
+              Dokumen <span className="text-[10px] text-slate-400 font-normal ml-0.5 align-baseline">(Opsional)</span>
             </label>
             <input
               type="file"
