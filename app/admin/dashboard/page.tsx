@@ -191,7 +191,15 @@ function AdminDashboardContent() {
 
       dokumenUrl = publicUrlData.publicUrl;
     }
+    // 1. Definisikan variabel status terlebih dahulu sebelum update ke Supabase
+    let status = 'ON PROGRESS';
+    if (updatedTask.progress === 100) {
+      status = 'SUDAH SELESAI';
+    } else if (updatedTask.progress === 0) {
+      status = 'BELUM DIKERJAKAN';
+    }
 
+    // 2. Masukkan variabel tersebut ke dalam .update()
     const { error } = await supabase
       .from('progress_targets')
       .update({
@@ -200,6 +208,7 @@ function AdminDashboardContent() {
         waktu_mulai: updatedTask.waktuMulai,
         tenggat_waktu: updatedTask.tenggatWaktu,
         progress: updatedTask.progress,
+        status: status,
         pic: updatedTask.pic,
         keterangan: updatedTask.keterangan,
         dokumen: dokumenUrl,
