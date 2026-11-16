@@ -128,7 +128,7 @@ export default function ProgressForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Keterangan / Catatan
+              Keterangan / Catatan(Opsional)
             </label>
             <textarea
               rows={1}
