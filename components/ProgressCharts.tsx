@@ -77,14 +77,19 @@ export default function ProgressCharts({
             </ResponsiveContainer>
           </div>
           <div className="flex flex-wrap justify-center gap-3 mt-2 text-[11px] font-semibold text-slate-600">
-            {pieDataStatus.map((entry, idx) => (
-              <div key={idx} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ 
-                  backgroundColor: entry.name === 'SUDAH SELESAI' ? '#10b981' : entry.name === 'OVERDUE' ? '#ED1E28' : '#f59e0b' 
-                }}></span>
-                <span>{entry.name}</span>
-              </div>
-            ))}
+            {pieDataStatus.map((entry, idx) => {
+              let color = '#94a3b8';
+              if (entry.name === 'SUDAH SELESAI') color = '#10b981';
+              else if (entry.name === 'OVERDUE') color = '#ED1E28';
+              else if (entry.name === 'ON PROGRESS') color = '#f59e0b';
+              
+              return (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }}></span>
+                  <span>{entry.name}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
