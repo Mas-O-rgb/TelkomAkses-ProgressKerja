@@ -148,6 +148,7 @@ function AdminDashboardContent() {
         waktu_mulai: formData.waktuMulai,
         tenggat_waktu: formData.tenggatWaktu,
         progress: formData.progress,
+        status: status,
         pic: formData.pic,
         keterangan: formData.keterangan,
         dokumen: dokumenUrl,
@@ -191,6 +192,9 @@ function AdminDashboardContent() {
 
       dokumenUrl = publicUrlData.publicUrl;
     }
+
+    const today = new Date().toISOString().split('T')[0];
+
     // 1. Definisikan variabel status terlebih dahulu sebelum update ke Supabase
     let status = 'ON PROGRESS';
     if (updatedTask.progress === 100) {
