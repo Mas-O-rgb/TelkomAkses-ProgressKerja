@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Save, X, FileText, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, X, FileText, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DAFTAR_PIC, getStatusInfo } from '@/utils/helpers';
 
 export interface Task {
@@ -28,6 +28,9 @@ interface ProgressTableProps {
   isPicView?: boolean;
 }
 
+const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+const ITEMS_PER_PAGE = 25;
+
 export default function ProgressTable({
   tasks,
   filterKategori,
@@ -39,8 +42,8 @@ export default function ProgressTable({
   isPicView = false,
 }: ProgressTableProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  // State untuk melacak ID baris yang sedang memuat (Simpan / Hapus)
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [editForm, setEditForm] = useState<Task>({
     id: 0,
@@ -55,18 +58,38 @@ export default function ProgressTable({
     fileDokumen: null,
   });
 
-  // Mengambil daftar kategori unik untuk dropdown filter
   const uniqueCategories = Array.from(new Set(tasks.map((t) => t.kategori).filter(Boolean)));
 
-  // Filter data berdasarkan kategori dan kata kunci pencarian
+  // Filter data berdasarkan kategori dan pencarian
   const filteredTasks = tasks.filter((task) => {
     const matchKategori = filterKategori === 'ALL' || task.kategori === filterKategori;
+    const keyword = searchTerm.toLowerCase();
     const matchSearch =
-      task.namaTarget.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.pic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (task.keterangan && task.keterangan.toLowerCase().includes(searchTerm.toLowerCase()));
+      task.namaTarget.toLowerCase().includes(keyword) ||
+      task.pic.toLowerCase().includes(keyword) ||
+      Boolean(task.keterangan?.toLowerCase().includes(keyword));
     return matchKategori && matchSearch;
   });
+
+  // Logika Paginasi (25 baris per halaman)
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / ITEMS_PER_PAGE));
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(Math.max(prev, 1), totalPages));
+  }, [totalPages]);
+
+  const handleFilterChange = (val: string) => {
+    setFilterKategori(val);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchTerm(val);
+    setCurrentPage(1);
+  };
 
   const handleStartEdit = (task: Task) => {
     setEditingId(task.id);
@@ -77,7 +100,6 @@ export default function ProgressTable({
     setEditingId(null);
   };
 
-  // Fungsi Simpan Edit dengan Visual Loading
   const handleSaveEdit = async () => {
     if (!onUpdateTask) return;
     setActionLoadingId(editForm.id);
@@ -89,7 +111,6 @@ export default function ProgressTable({
     }
   };
 
-  // Fungsi Hapus dengan Visual Loading
   const handleDeleteClick = async (id: number) => {
     if (!onDelete) return;
     setActionLoadingId(id);
@@ -106,7 +127,7 @@ export default function ProgressTable({
       <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50">
         <select
           value={filterKategori}
-          onChange={(e) => setFilterKategori(e.target.value)}
+          onChange={(e) => handleFilterChange(e.target.value)}
           className="w-full sm:w-48 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
         >
           <option value="ALL">Semua Kategori</option>
@@ -121,7 +142,7 @@ export default function ProgressTable({
           type="text"
           placeholder="Cari target atau PIC..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full sm:w-64 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
         />
       </div>
@@ -145,18 +166,19 @@ export default function ProgressTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredTasks.length > 0 ? (
-              filteredTasks.map((task, index) => {
+            {currentTasks.length > 0 ? (
+              currentTasks.map((task, index) => {
                 const isEditing = editingId === task.id;
                 const isRowLoading = actionLoadingId === task.id;
                 const statusInfo = getStatusInfo(
                   isEditing ? editForm.tenggatWaktu : task.tenggatWaktu,
                   isEditing ? editForm.progress : task.progress
                 );
+                const absoluteIndex = indexOfFirstItem + index + 1;
 
                 return (
                   <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-2 text-center text-slate-500">{index + 1}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-500">{absoluteIndex}</td>
 
                     {/* Kategori */}
                     <td className="py-2.5 px-2 font-semibold text-slate-700">
@@ -220,30 +242,20 @@ export default function ProgressTable({
 
                     {/* Progress */}
                     <td className="py-2.5 px-2">
-                      {editingId === task.id ? (
-                        // JIKA DALAM MODE EDIT: Tampilkan Dropdown
+                      {isEditing ? (
                         <select
                           value={editForm.progress}
                           onChange={(e) => setEditForm({ ...editForm, progress: Number(e.target.value) })}
                           className="w-full p-1.5 border border-slate-300 rounded-lg bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#ED1E28]"
                         >
-                          <option value={0}>0%</option>
-                          <option value={10}>10%</option>
-                          <option value={20}>20%</option>
-                          <option value={30}>30%</option>
-                          <option value={40}>40%</option>
-                          <option value={50}>50%</option>
-                          <option value={60}>60%</option>
-                          <option value={70}>70%</option>
-                          <option value={80}>80%</option>
-                          <option value={90}>90%</option>
-                          <option value={100}>100%</option>
+                          {PROGRESS_OPTIONS.map((val) => (
+                            <option key={val} value={val}>
+                              {val}%
+                            </option>
+                          ))}
                         </select>
                       ) : (
-                        // JIKA TIDAK DIEDIT: Tampilkan sebagai Teks/Badge biasa
-                        <span className="font-semibold text-slate-700">
-                          {task.progress}%
-                        </span>
+                        <span className="font-semibold text-slate-700">{task.progress}%</span>
                       )}
                     </td>
 
@@ -273,7 +285,7 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Keterangan (Mengambang saat diklik agar tidak mendorong kolom sebelah / memicu scroll) */}
+                    {/* Keterangan */}
                     <td className="py-2.5 px-2 text-slate-600 align-top">
                       {isEditing ? (
                         <div className="relative h-7 w-36">
@@ -314,17 +326,17 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Kolom Aksi dengan Indikator Visual Loading */}
+                    {/* Aksi */}
                     <td className="py-2.5 px-2 text-center whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
                         {isEditing ? (
                           <>
                             <button
-                              type="button" // Ubah jadi type="button" agar tidak mentrigger submit form bawaan
-                              onMouseDown={(e) => e.preventDefault()} // Mencegah textarea mencuri klik pertama
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
                               onClick={handleSaveEdit}
                               disabled={isRowLoading}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-all"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 disabled:opacity-60 cursor-pointer transition-all"
                               title="Simpan"
                             >
                               {isRowLoading ? (
@@ -360,7 +372,7 @@ export default function ProgressTable({
                               <button
                                 onClick={() => handleDeleteClick(task.id)}
                                 disabled={isRowLoading}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-red-600 bg-red-50 rounded hover:bg-red-100 font-medium disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-all"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-red-600 bg-red-50 rounded hover:bg-red-100 font-medium disabled:opacity-60 cursor-pointer transition-all"
                               >
                                 {isRowLoading ? (
                                   <>
@@ -388,6 +400,37 @@ export default function ProgressTable({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Kontrol Navigasi Paginasi */}
+      <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50 text-xs text-slate-600">
+        <div>
+          Menampilkan <span className="font-semibold">{filteredTasks.length > 0 ? indexOfFirstItem + 1 : 0}</span> sampai{' '}
+          <span className="font-semibold">{Math.min(indexOfLastItem, filteredTasks.length)}</span> dari{' '}
+          <span className="font-semibold">{filteredTasks.length}</span> data target
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+          >
+            <ChevronLeft size={14} /> Sebelumnya
+          </button>
+
+          <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800">
+            Halaman {currentPage} dari {totalPages}
+          </span>
+
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+          >
+            Berikutnya <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -6,9 +6,17 @@ import ProgressCharts from '@/components/ProgressCharts';
 import ProgressTable, { Task } from '@/components/ProgressTable';
 import { getStatusInfo } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
-import { UserCheck, LogOut, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+
+// Helper terpusat untuk kalkulasi status
+const calculateTaskStatus = (tenggatWaktu: string, progress: number): string => {
+  const today = new Date().toISOString().split('T')[0];
+  if (tenggatWaktu && tenggatWaktu < today) return 'OVERDUE';
+  if (progress === 100) return 'SUDAH SELESAI';
+  if (progress > 0) return 'ON PROGRESS';
+  return 'BELUM DIKERJAKAN';
+};
 
 function PicDashboardContent() {
   const params = useParams();
@@ -20,9 +28,9 @@ function PicDashboardContent() {
   const [filterKategori, setFilterKategori] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [greeting, setGreeting] =useState('Selamat Datang');
+  const [greeting, setGreeting] = useState('Selamat Datang');
 
-  // 1. Logika Penentuan Waktu Real-Time untuk PIC
+  // Logika Penentuan Waktu Real-Time untuk PIC
   useEffect(() => {
     const updateGreeting = () => {
       const hour = new Date().getHours();
@@ -38,7 +46,7 @@ function PicDashboardContent() {
     };
 
     updateGreeting();
-    const interval = setInterval(updateGreeting, 60000); // Perbarui tiap 1 menit
+    const interval = setInterval(updateGreeting, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -98,11 +106,13 @@ function PicDashboardContent() {
       dokumenUrl = publicUrlData.publicUrl;
     }
 
+    // Update data ke Supabase beserta status otomatisnya
     const { error } = await supabase
       .from('progress_targets')
       .update({
         nama_target: updatedTask.namaTarget,
         progress: updatedTask.progress,
+        status: calculateTaskStatus(updatedTask.tenggatWaktu, updatedTask.progress), // <-- Sinkronisasi status otomatis
         keterangan: updatedTask.keterangan,
         dokumen: dokumenUrl,
       })
@@ -120,22 +130,6 @@ function PicDashboardContent() {
     router.push('/');
   };
 
-  const statusCounts = tasks.reduce((acc: any, task) => {
-    const statusObj = getStatusInfo(task.tenggatWaktu, task.progress);
-    acc[statusObj.text] = (acc[statusObj.text] || 0) + 1;
-    return acc;
-  }, {});
-  const pieDataStatusFormatted = Object.keys(statusCounts).map(key => ({ name: key, value: statusCounts[key] }));
-
-  const countByField = (field: keyof Task) => {
-    const counts = tasks.reduce((acc: any, task) => {
-      const key = String(task[field] || 'Lainnya');
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-    return Object.keys(counts).map(key => ({ name: key, value: counts[key], jumlah: counts[key] }));
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
       <Header 
@@ -146,7 +140,6 @@ function PicDashboardContent() {
       />
 
       <main className="max-w-[96%] mx-auto px-0 pt-24 pb-12 space-y-8 flex-1 w-full">
-
         {loading ? (
           <div className="text-center py-8 text-slate-500 text-sm">Memuat data target...</div>
         ) : (
@@ -160,7 +153,6 @@ function PicDashboardContent() {
             isPicView={true}
           />
         )}
-
       </main>
       <Footer />
     </div>

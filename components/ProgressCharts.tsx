@@ -18,7 +18,6 @@ interface ProgressChartsProps {
 export default function ProgressCharts({ 
   pieDataStatus, 
   pieDataKategori, 
-  barDataPic, 
   stackedDataPicStatus = [],
   tasks = [] 
 }: ProgressChartsProps) {

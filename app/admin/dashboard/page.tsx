@@ -7,9 +7,17 @@ import ProgressForm from '@/components/ProgressForm';
 import ProgressTable from '@/components/ProgressTable';
 import { getStatusInfo, DAFTAR_PIC } from '@/utils/helpers';
 import { supabase } from '@/lib/supabaseClient';
-import { ShieldCheck, LogOut } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+
+// Helper terpusat untuk kalkulasi status agar konsisten
+const calculateTaskStatus = (tenggatWaktu: string, progress: number): string => {
+  const today = new Date().toISOString().split('T')[0];
+  if (tenggatWaktu && tenggatWaktu < today) return 'OVERDUE';
+  if (progress === 100) return 'SUDAH SELESAI';
+  if (progress > 0) return 'ON PROGRESS';
+  return 'BELUM DIKERJAKAN';
+};
 
 function AdminDashboardContent() {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -18,13 +26,12 @@ function AdminDashboardContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
   const router = useRouter();
 
   const [adminName, setAdminName] = useState('Administrator');
   const [greeting, setGreeting] = useState('Selamat Datang');
 
-// Ambil Nama Admin dari Session & Tentukan Sapaan Waktu Real-Time
+  // Ambil Nama Admin dari Session & Tentukan Sapaan Waktu Real-Time
   useEffect(() => {
     const storedName = sessionStorage.getItem('userName');
     if (storedName) {
@@ -45,15 +52,8 @@ function AdminDashboardContent() {
     };
 
     updateGreeting();
-    const interval = setInterval(updateGreeting, 60000); // Cek tiap menit
+    const interval = setInterval(updateGreeting, 60000);
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const storedName = sessionStorage.getItem('userName');
-    if (storedName) {
-      setAdminName(storedName);
-    }
   }, []);
 
   const initialFormState = {
@@ -76,7 +76,6 @@ function AdminDashboardContent() {
       router.push('/');
       return;
     }
-    setUserEmail('Administrator');
     fetchTasks();
   }, [router]);
 
@@ -142,17 +141,7 @@ function AdminDashboardContent() {
         dokumenUrl = publicUrlData.publicUrl;
       }
 
-      // --- TAMBAHKAN KALKULASI STATUS DI SINI UNTUK TAMBAH/INSERT BARU ---
-      const today = new Date().toISOString().split('T')[0];
-      let status = 'ON PROGRESS';
-      
-      if (formData.tenggatWaktu && formData.tenggatWaktu < today) {
-        status = 'OVERDUE';
-      } else if (formData.progress === 100) {
-        status = 'SUDAH SELESAI';
-      } else if (formData.progress === 0) {
-        status = 'BELUM DIKERJAKAN';
-      }
+      const status = calculateTaskStatus(formData.tenggatWaktu, formData.progress);
 
       const payload = {
         kategori: formData.kategori,
@@ -205,17 +194,9 @@ function AdminDashboardContent() {
       dokumenUrl = publicUrlData.publicUrl;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    // Menggunakan helper kalkulasi status agar status OVERDUE terpantau akurat saat update
+    const status = calculateTaskStatus(updatedTask.tenggatWaktu, updatedTask.progress);
 
-    // 1. Definisikan variabel status terlebih dahulu sebelum update ke Supabase
-    let status = 'ON PROGRESS';
-    if (updatedTask.progress === 100) {
-      status = 'SUDAH SELESAI';
-    } else if (updatedTask.progress === 0) {
-      status = 'BELUM DIKERJAKAN';
-    }
-
-    // 2. Masukkan variabel tersebut ke dalam .update()
     const { error } = await supabase
       .from('progress_targets')
       .update({
@@ -245,7 +226,7 @@ function AdminDashboardContent() {
         console.error('Gagal menghapus data:', error);
       } else {
         if (currentTask?.id === id) resetForm();
-        await fetchTasks(); // Tambahkan await agar loading sinkron
+        await fetchTasks();
       }
     }
   };
@@ -255,24 +236,9 @@ function AdminDashboardContent() {
     router.push('/');
   };
 
-  // Kalkulasi Grafik & Status dengan Prioritas Tenggat Lewat (Overdue)
+  // Kalkulasi Grafik & Status
   const statusCounts = tasks.reduce((acc: any, task) => {
-    const today = new Date().toISOString().split('T')[0];
-    let status = 'BELUM DIKERJAKAN';
-
-    // 1. Cek apakah tanggal hari ini sudah melewati tenggat waktu (wajib OVERDUE walau 100%)
-    if (task.tenggatWaktu && task.tenggatWaktu < today) {
-      status = 'OVERDUE';
-    } 
-    // 2. Jika belum lewat, cek apakah sudah 100%
-    else if (task.progress === 100) {
-      status = 'SUDAH SELESAI';
-    } 
-    // 3. Jika sedang dikerjakan
-    else if (task.progress > 0) {
-      status = 'ON PROGRESS';
-    }
-
+    const status = calculateTaskStatus(task.tenggatWaktu, task.progress);
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
@@ -281,8 +247,7 @@ function AdminDashboardContent() {
   const picStatusMap: { [picName: string]: { [statusText: string]: number } } = {};
   tasks.forEach(task => {
     const picName = task.pic || 'Tanpa PIC';
-    const statusObj = getStatusInfo(task.tenggatWaktu, task.progress);
-    const statusText = statusObj.text; 
+    const statusText = calculateTaskStatus(task.tenggatWaktu, task.progress);
 
     if (!picStatusMap[picName]) {
       picStatusMap[picName] = {
@@ -311,14 +276,12 @@ function AdminDashboardContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
-      {/** Header */}
       <Header 
-      title="Monitoring Progress Kerja" 
-      subtitle={`${greeting}, ${adminName}`} 
-      role="admin" 
-      onLogout={handleLogout} 
+        title="Monitoring Progress Kerja" 
+        subtitle={`${greeting}, ${adminName}`} 
+        role="admin" 
+        onLogout={handleLogout} 
       />
-      {/** Header */}
 
       <main className="max-w-[96%] mx-auto px-0 pt-24 pb-12 space-y-8 flex-1 w-full">
         <ProgressCharts 
@@ -329,7 +292,6 @@ function AdminDashboardContent() {
           tasks={tasks}
         />
 
-        {/* Form Input / Edit Target untuk Admin */}
         <ProgressForm
           formData={formData}
           setFormData={setFormData}

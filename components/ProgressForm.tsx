@@ -14,6 +14,8 @@ interface ProgressFormProps {
   isAdmin?: boolean;
 }
 
+const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
 export default function ProgressForm({
   formData,
   setFormData,
@@ -24,6 +26,9 @@ export default function ProgressForm({
   isAdmin = true,
 }: ProgressFormProps) {
   if (!isAdmin) return null;
+
+  const inputClass =
+    'w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]';
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
@@ -43,7 +48,7 @@ export default function ProgressForm({
               placeholder="Contoh: QMS, HSE..."
               value={formData.kategori}
               onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+              className={inputClass}
             />
           </div>
 
@@ -56,7 +61,7 @@ export default function ProgressForm({
               placeholder="Ketik rincian target..."
               value={formData.namaTarget}
               onChange={(e) => setFormData({ ...formData, namaTarget: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+              className={inputClass}
             />
           </div>
 
@@ -68,7 +73,7 @@ export default function ProgressForm({
               type="date"
               value={formData.waktuMulai}
               onChange={(e) => setFormData({ ...formData, waktuMulai: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+              className={inputClass}
             />
           </div>
 
@@ -80,7 +85,7 @@ export default function ProgressForm({
               type="date"
               value={formData.tenggatWaktu}
               onChange={(e) => setFormData({ ...formData, tenggatWaktu: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+              className={inputClass}
             />
           </div>
         </div>
@@ -94,19 +99,13 @@ export default function ProgressForm({
             <select
               value={formData.progress}
               onChange={(e) => setFormData({ ...formData, progress: Number(e.target.value) })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+              className={inputClass}
             >
-              <option value={0}>0%</option>
-              <option value={10}>10%</option>
-              <option value={20}>20%</option>
-              <option value={30}>30%</option>
-              <option value={40}>40%</option>
-              <option value={50}>50%</option>
-              <option value={60}>60%</option>
-              <option value={70}>70%</option>
-              <option value={80}>80%</option>
-              <option value={90}>90%</option>
-              <option value={100}>100%</option>
+              {PROGRESS_OPTIONS.map((val) => (
+                <option key={val} value={val}>
+                  {val}%
+                </option>
+              ))}
             </select>
           </div>
 
@@ -117,7 +116,7 @@ export default function ProgressForm({
             <select
               value={formData.pic}
               onChange={(e) => setFormData({ ...formData, pic: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]"
+              className={inputClass}
             >
               {DAFTAR_PIC.map((namaPic) => (
                 <option key={namaPic} value={namaPic}>
@@ -136,7 +135,7 @@ export default function ProgressForm({
               placeholder="Catatan tambahan..."
               value={formData.keterangan || ''}
               onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28] focus:h-20 resize-none"
+              className={`${inputClass} transition-all duration-200 focus:h-20 resize-none`}
             />
           </div>
 
@@ -165,7 +164,7 @@ export default function ProgressForm({
           )}
           <button
             type="submit"
-            onMouseDown={(e) => e.preventDefault()} // Mencegah textarea mencuri klik pertama
+            onMouseDown={(e) => e.preventDefault()}
             disabled={loading}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#ED1E28] hover:bg-[#d41922] disabled:bg-slate-400 text-white rounded-lg text-xs font-bold cursor-pointer disabled:cursor-not-allowed transition-all shadow-sm"
           >
