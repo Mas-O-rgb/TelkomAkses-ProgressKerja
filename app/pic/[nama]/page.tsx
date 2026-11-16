@@ -133,7 +133,7 @@ function PicDashboardContent() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
       <Header 
-        title="TELKOM AKSES" 
+        title="PROGRESS KERJA" 
         subtitle={`${greeting}, ${picName}`} 
         role="pic" 
         onLogout={handleLogout} 
