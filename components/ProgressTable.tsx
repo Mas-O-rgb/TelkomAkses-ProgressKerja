@@ -44,28 +44,21 @@ export default function ProgressTable({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeHistoryTask, setActiveHistoryTask] = useState<Task | null>(null);
+  
+  // Menggunakan ID aktif agar modal tidak tertutup saat data tabel di-refresh real-time
+  const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
+  const activeHistoryTask = tasks.find(t => t.id === activeHistoryId) || null;
+
   const [locallyReadIds, setLocallyReadIds] = useState<number[]>([]);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
 
   const handleOpenHistory = (task: Task) => {
-    // Cari data terbaru dari props tasks agar selalu sinkron
-    const latestTask = tasks.find(t => t.id === task.id) || task;
-    const cleanedKeterangan = latestTask.keterangan
-      ? latestTask.keterangan
-          .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
-          .replace(/^\[UNREAD_BY_PIC\]\s*/g, '')
-      : '';
+    setActiveHistoryId(task.id);
+    setReplyMessage('');
 
-    setActiveHistoryTask({
-      ...latestTask,
-      keterangan: cleanedKeterangan,
-    });
-    setReplyMessage(''); // Reset input balasan saat modal dibuka
-
-    if (!locallyReadIds.includes(latestTask.id)) {
-      setLocallyReadIds((prev) => [...prev, latestTask.id]);
+    if (!locallyReadIds.includes(task.id)) {
+      setLocallyReadIds((prev) => [...prev, task.id]);
     }
   };
 
@@ -164,7 +157,7 @@ export default function ProgressTable({
     }
   };
 
-  // Fungsi untuk mengirim balasan langsung dari dalam Modal Pop-up Riwayat (Tanpa Refresh Total)
+  // Fungsi mengirim balasan dari Modal tanpa menutup modal atau membuat halaman reload/mental
   const handleSendReplyFromModal = async () => {
     if (!activeHistoryTask || !replyMessage.trim() || !onUpdateTask) return;
     setIsSendingReply(true);
@@ -176,7 +169,7 @@ export default function ProgressTable({
         minute: '2-digit',
       })}`;
 
-      const originalTask = tasks.find((t) => t.id === activeHistoryTask.id) || activeHistoryTask;
+      const originalTask = activeHistoryTask;
       const cleanOldKeterangan = (originalTask.keterangan || '-')
         .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
@@ -195,18 +188,7 @@ export default function ProgressTable({
         keterangan: finalKeterangan,
       };
 
-      // Kirim ke database
       await onUpdateTask(updatedData);
-
-      // Perbarui tampilan modal seketika secara lokal TANPA menutup modal atau reload halaman
-      const cleanedNewDisplay = finalKeterangan
-        .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
-        .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
-
-      setActiveHistoryTask({
-        ...originalTask,
-        keterangan: cleanedNewDisplay,
-      });
       setReplyMessage('');
     } finally {
       setIsSendingReply(false);
@@ -611,7 +593,7 @@ export default function ProgressTable({
               </div>
               <button
                 type="button"
-                onClick={() => setActiveHistoryTask(null)}
+                onClick={() => setActiveHistoryId(null)}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 cursor-pointer"
               >
                 ✕
@@ -679,7 +661,7 @@ export default function ProgressTable({
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setActiveHistoryTask(null)}
+                  onClick={() => setActiveHistoryId(null)}
                   className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer transition-all"
                 >
                   Tutup
