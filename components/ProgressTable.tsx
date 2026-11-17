@@ -164,7 +164,7 @@ export default function ProgressTable({
     }
   };
 
-  // Fungsi untuk mengirim balasan langsung dari dalam Modal Pop-up Riwayat
+  // Fungsi untuk mengirim balasan langsung dari dalam Modal Pop-up Riwayat (Tanpa Refresh Total)
   const handleSendReplyFromModal = async () => {
     if (!activeHistoryTask || !replyMessage.trim() || !onUpdateTask) return;
     setIsSendingReply(true);
@@ -195,9 +195,10 @@ export default function ProgressTable({
         keterangan: finalKeterangan,
       };
 
+      // Kirim ke database
       await onUpdateTask(updatedData);
 
-      // Update tampilan modal seketika
+      // Perbarui tampilan modal seketika secara lokal TANPA menutup modal atau reload halaman
       const cleanedNewDisplay = finalKeterangan
         .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
