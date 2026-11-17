@@ -45,16 +45,25 @@ export default function ProgressTable({
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Menggunakan ID aktif agar modal tidak tertutup saat data tabel di-refresh real-time
-  const [activeHistoryId, setActiveHistoryId] = useState<number | null>(null);
-  const activeHistoryTask = tasks.find(t => t.id === activeHistoryId) || null;
+  // Menggunakan state mandiri untuk modal agar tidak ikut ter-reset/tertutup saat tabel di-refresh
+  const [activeHistoryTask, setActiveHistoryTask] = useState<Task | null>(null);
 
   const [locallyReadIds, setLocallyReadIds] = useState<number[]>([]);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
 
+  // Sinkronisasi data real-time ke dalam modal yang sedang terbuka secara mandiri
+  useEffect(() => {
+    if (activeHistoryTask) {
+      const latestUpdated = tasks.find(t => t.id === activeHistoryTask.id);
+      if (latestUpdated && latestUpdated.keterangan !== activeHistoryTask.keterangan) {
+        setActiveHistoryTask(latestUpdated);
+      }
+    }
+  }, [tasks]);
+
   const handleOpenHistory = (task: Task) => {
-    setActiveHistoryId(task.id);
+    setActiveHistoryTask(task);
     setReplyMessage('');
 
     if (!locallyReadIds.includes(task.id)) {
@@ -157,7 +166,7 @@ export default function ProgressTable({
     }
   };
 
-  // Fungsi mengirim balasan dari Modal tanpa menutup modal atau membuat halaman reload/mental
+  // Fungsi mengirim balasan dari dalam modal tanpa menutup modal
   const handleSendReplyFromModal = async () => {
     if (!activeHistoryTask || !replyMessage.trim() || !onUpdateTask) return;
     setIsSendingReply(true);
@@ -188,8 +197,12 @@ export default function ProgressTable({
         keterangan: finalKeterangan,
       };
 
-      await onUpdateTask(updatedData);
+      // Update tampilan modal seketika secara lokal agar langsung responsif
+      setActiveHistoryTask(updatedData);
       setReplyMessage('');
+
+      // Kirim ke database (supabase)
+      await onUpdateTask(updatedData);
     } finally {
       setIsSendingReply(false);
     }
@@ -593,7 +606,7 @@ export default function ProgressTable({
               </div>
               <button
                 type="button"
-                onClick={() => setActiveHistoryId(null)}
+                onClick={() => setActiveHistoryTask(null)}
                 className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 cursor-pointer"
               >
                 ✕
@@ -661,7 +674,7 @@ export default function ProgressTable({
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setActiveHistoryId(null)}
+                  onClick={() => setActiveHistoryTask(null)}
                   className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer transition-all"
                 >
                   Tutup
