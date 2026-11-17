@@ -76,10 +76,26 @@ function PicDashboardContent() {
     setLoading(false);
   }, [picName]);
 
+  // Mengaktifkan Supabase Realtime di Halaman PIC
   useEffect(() => {
-    if (picName) {
-      fetchTasksForPIC();
-    }
+    if (!picName) return;
+
+    fetchTasksForPIC();
+
+    const channel = supabase
+      .channel('public:progress_targets_pic')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'progress_targets' },
+        () => {
+          fetchTasksForPIC(); // Sinkronisasi otomatis saat ada data/pesan masuk
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [picName, fetchTasksForPIC]);
 
   const handleUpdateTask = async (updatedTask: Task) => {
@@ -112,7 +128,7 @@ function PicDashboardContent() {
       .update({
         nama_target: updatedTask.namaTarget,
         progress: updatedTask.progress,
-        status: calculateTaskStatus(updatedTask.tenggatWaktu, updatedTask.progress), // <-- Sinkronisasi status otomatis
+        status: calculateTaskStatus(updatedTask.tenggatWaktu, updatedTask.progress),
         keterangan: updatedTask.keterangan,
         dokumen: dokumenUrl,
       })

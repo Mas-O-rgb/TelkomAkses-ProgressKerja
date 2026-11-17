@@ -69,14 +69,31 @@ function AdminDashboardContent() {
 
   const [formData, setFormData] = useState(initialFormState);
 
-  // Verifikasi Sesi Autentikasi Admin
+  // Verifikasi Sesi Autentikasi Admin & Langsung Pasang Supabase Realtime
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (role !== 'admin') {
       router.push('/');
       return;
     }
+
     fetchTasks();
+
+    // Mengaktifkan Supabase Realtime agar sinkron otomatis tanpa refresh
+    const channel = supabase
+      .channel('public:progress_targets')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'progress_targets' },
+        () => {
+          fetchTasks(); // Ambil data baru otomatis saat ada perubahan di database
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [router]);
 
   const fetchTasks = async () => {
@@ -194,7 +211,6 @@ function AdminDashboardContent() {
       dokumenUrl = publicUrlData.publicUrl;
     }
 
-    // Menggunakan helper kalkulasi status agar status OVERDUE terpantau akurat saat update
     const status = calculateTaskStatus(updatedTask.tenggatWaktu, updatedTask.progress);
 
     const { error } = await supabase
@@ -321,10 +337,12 @@ function AdminDashboardContent() {
   );
 }
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-xs">Memuat Panel Admin...</div>}>
       <AdminDashboardContent />
     </Suspense>
   );
 }
+
+export default AdminDashboard;
