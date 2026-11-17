@@ -76,19 +76,56 @@ function PicDashboardContent() {
     setLoading(false);
   }, [picName]);
 
-  // Mengaktifkan Supabase Realtime di Halaman PIC
+  // Mengaktifkan Supabase Realtime dengan pembaruan senyap (Silent Update)
   useEffect(() => {
     if (!picName) return;
 
     fetchTasksForPIC();
 
     const channel = supabase
-      .channel('pic-dashboard-realtime')
+      .channel('pic-dashboard-silent-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'progress_targets' },
-        () => {
-          fetchTasksForPIC();
+        (payload) => {
+          const newData = payload.new as any;
+          const eventType = payload.eventType;
+
+          if (eventType === 'UPDATE' && newData.pic === picName) {
+            setTasks((prev) =>
+              prev.map((task) =>
+                task.id === newData.id
+                  ? {
+                      ...task,
+                      kategori: newData.kategori,
+                      namaTarget: newData.nama_target,
+                      waktuMulai: newData.waktu_mulai,
+                      tenggatWaktu: newData.tenggat_waktu,
+                      progress: newData.progress,
+                      keterangan: newData.keterangan || '',
+                      dokumen: newData.dokumen || task.dokumen,
+                    }
+                  : task
+              )
+            );
+          } else if (eventType === 'INSERT' && newData.pic === picName) {
+            setTasks((prev) => [
+              {
+                id: newData.id,
+                kategori: newData.kategori,
+                namaTarget: newData.nama_target,
+                waktuMulai: newData.waktu_mulai,
+                tenggatWaktu: newData.tenggat_waktu,
+                progress: newData.progress,
+                pic: newData.pic,
+                keterangan: newData.keterangan || '',
+                dokumen: newData.dokumen || null,
+              },
+              ...prev,
+            ]);
+          } else if (eventType === 'DELETE') {
+            setTasks((prev) => prev.filter((task) => task.id !== payload.old.id));
+          }
         }
       )
       .subscribe();
@@ -136,8 +173,6 @@ function PicDashboardContent() {
 
     if (error) {
       alert('Gagal memperbarui progress: ' + error.message);
-    } else {
-      await fetchTasksForPIC();
     }
   };
 

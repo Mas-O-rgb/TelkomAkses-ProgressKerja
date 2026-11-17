@@ -69,7 +69,7 @@ function AdminDashboardContent() {
 
   const [formData, setFormData] = useState(initialFormState);
 
-  // Verifikasi Sesi Autentikasi Admin & Langsung Pasang Supabase Realtime
+  // Verifikasi Sesi Admin & Supabase Realtime (Silent Update tanpa reload/kedip)
   useEffect(() => {
     const role = sessionStorage.getItem('userRole');
     if (role !== 'admin') {
@@ -80,12 +80,50 @@ function AdminDashboardContent() {
     fetchTasks();
 
     const channel = supabase
-      .channel('admin-dashboard-realtime')
+      .channel('admin-dashboard-silent-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'progress_targets' },
-        () => {
-          fetchTasks();
+        (payload) => {
+          const newData = payload.new as any;
+          const eventType = payload.eventType;
+
+          if (eventType === 'INSERT') {
+            setTasks((prev) => [
+              {
+                id: newData.id,
+                kategori: newData.kategori,
+                namaTarget: newData.nama_target,
+                waktuMulai: newData.waktu_mulai,
+                tenggatWaktu: newData.tenggat_waktu,
+                progress: newData.progress,
+                pic: newData.pic,
+                keterangan: newData.keterangan || '',
+                dokumen: newData.dokumen || 'Upluad File',
+              },
+              ...prev,
+            ]);
+          } else if (eventType === 'UPDATE') {
+            setTasks((prev) =>
+              prev.map((task) =>
+                task.id === newData.id
+                  ? {
+                      ...task,
+                      kategori: newData.kategori,
+                      namaTarget: newData.nama_target,
+                      waktuMulai: newData.waktu_mulai,
+                      tenggatWaktu: newData.tenggat_waktu,
+                      progress: newData.progress,
+                      pic: newData.pic,
+                      keterangan: newData.keterangan || '',
+                      dokumen: newData.dokumen || task.dokumen,
+                    }
+                  : task
+              )
+            );
+          } else if (eventType === 'DELETE') {
+            setTasks((prev) => prev.filter((task) => task.id !== payload.old.id));
+          }
         }
       )
       .subscribe();
@@ -179,7 +217,6 @@ function AdminDashboardContent() {
         console.error(currentTask ? 'Gagal update data:' : 'Gagal tambah data:', error);
       } else {
         resetForm();
-        await fetchTasks();
       }
     } finally {
       setIsSubmitting(false);
@@ -229,8 +266,6 @@ function AdminDashboardContent() {
 
     if (error) {
       alert('Gagal memperbarui data: ' + error.message);
-    } else {
-      await fetchTasks();
     }
   };
 
@@ -241,7 +276,6 @@ function AdminDashboardContent() {
         console.error('Gagal menghapus data:', error);
       } else {
         if (currentTask?.id === id) resetForm();
-        await fetchTasks();
       }
     }
   };
