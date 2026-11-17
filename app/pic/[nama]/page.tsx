@@ -83,12 +83,12 @@ function PicDashboardContent() {
     fetchTasksForPIC();
 
     const channel = supabase
-      .channel('public:progress_targets_pic')
+      .channel('pic-dashboard-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'progress_targets' },
         () => {
-          fetchTasksForPIC(); // Sinkronisasi otomatis saat ada data/pesan masuk
+          fetchTasksForPIC();
         }
       )
       .subscribe();

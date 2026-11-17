@@ -79,14 +79,13 @@ function AdminDashboardContent() {
 
     fetchTasks();
 
-    // Mengaktifkan Supabase Realtime agar sinkron otomatis tanpa refresh
     const channel = supabase
-      .channel('public:progress_targets')
+      .channel('admin-dashboard-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'progress_targets' },
         () => {
-          fetchTasks(); // Ambil data baru otomatis saat ada perubahan di database
+          fetchTasks();
         }
       )
       .subscribe();
