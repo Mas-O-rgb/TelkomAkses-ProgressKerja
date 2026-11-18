@@ -169,7 +169,7 @@ export default function ProgressTable({
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
 
       if (editForm.keterangan && editForm.keterangan.trim() !== '') {
-        // DINAMIS: Jika tampilan PIC, gunakan nama PIC dari form. Jika Admin, gunakan nama Admin.
+        // Mengambil nama PIC langsung dari data target/user, atau Admin jika bukan view PIC
         const senderName = isPicView ? editForm.pic : 'Hendra Hadiyatna Djatnika';
         const unreadTag = isPicView ? '[UNREAD_BY_ADMIN]' : '[UNREAD_BY_PIC]';
 
@@ -211,7 +211,7 @@ export default function ProgressTable({
         .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
 
-      // DINAMIS: Deteksi pengirim saat membalas dari modal
+      // Mengambil nama PIC secara dinamis dari task yang sedang aktif
       const senderName = isPicView ? originalTask.pic : 'Hendra Hadiyatna Djatnika';
       const unreadTag = isPicView ? '[UNREAD_BY_ADMIN]' : '[UNREAD_BY_PIC]';
 
@@ -626,51 +626,30 @@ export default function ProgressTable({
               </button>
             </div>
 
-            <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
+           <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
               {activeHistoryTask.keterangan ? (
                 activeHistoryTask.keterangan.split('────────────────').map((item, idx) => {
                   const timeMatch = item.match(/\[([\d\/]+\s+[\d\.]+)\]/);
                   const timestamp = timeMatch ? timeMatch[1] : '';
 
-                  const cleanItemWithoutUnread = item
-                    .replace(/\[UNREAD_BY_ADMIN\]/g, '')
-                    .replace(/\[UNREAD_BY_PIC\]/g, '')
-                    .trim();
+                  // 1. Bersihkan tag unread
+                  const cleanItem = item.replace(/\[UNREAD_BY_(ADMIN|PIC)\]/g, '').trim();
 
-                  // Ekstraksi nama pengirim mentah dari format "[Waktu] Nama Pengirim: Pesan"
-                  let rawSender = '';
-                  if (cleanItemWithoutUnread.includes(':')) {
-                    const beforeColon = cleanItemWithoutUnread.split(':')[0];
-                    rawSender = beforeColon.includes(']')
-                      ? beforeColon.split(']').pop()?.trim() || ''
-                      : beforeColon.trim();
-                  }
+                  // 2. Ambil nama pengirim langsung dari format "[waktu] Nama Pengirim: Pesan"
+                  const colonIndex = cleanItem.indexOf(':');
+                  const rawSender =
+                    colonIndex !== -1
+                      ? cleanItem.slice(0, colonIndex).replace(/^\[.*?\]\s*/, '').trim()
+                      : '';
 
-                  // Tentukan label pengirim berdasarkan nama yang terekam
-                  let sender = '';
-                  const upperRaw = rawSender.toUpperCase();
+                  const isAdmin = rawSender.toUpperCase().includes('HENDRA');
+                  const sender = isAdmin
+                    ? 'Hendra Hadiyatna Djatnika (Admin)'
+                    : `${rawSender || activeHistoryTask.pic} (PIC)`;
 
-                  if (
-                    upperRaw.includes('HENDRA') ||
-                    upperRaw === 'HHTJTK' ||
-                    upperRaw === 'ADMIN'
-                  ) {
-                    sender = 'Hendra Hadiyatna Djatnika (Admin)';
-                  } else if (upperRaw === 'KK') {
-                    // Data tes lama dengan inisial KK dialihkan ke nama PIC target
-                    sender = `${activeHistoryTask.pic} (PIC)`;
-                  } else if (rawSender) {
-                    // Tampilkan nama asli yang terekam (misal nama PIC yang bersangkutan)
-                    sender = `${rawSender} (PIC)`;
-                  } else {
-                    // Fallback jika pesan lama tidak memiliki nama pengirim sama sekali
-                    sender = `${activeHistoryTask.pic} (PIC)`;
-                  }
-
-                  // Bersihkan isi teks pesan murni
-                  let messageText = cleanItemWithoutUnread
-                    .replace(/^\[[\d\/]+\s+[\d\.]+\]\s*/, '')
-                    .replace(/^[^:]+:\s*/, '');
+                  // 3. Ambil isi pesan murni
+                  const messageText =
+                    colonIndex !== -1 ? cleanItem.slice(colonIndex + 1).trim() : cleanItem;
 
                   return (
                     <div
@@ -698,7 +677,7 @@ export default function ProgressTable({
                       </div>
 
                       <div className="whitespace-pre-wrap leading-relaxed text-[11px] text-slate-800 font-normal">
-                        {messageText.trim() || cleanItemWithoutUnread}
+                        {messageText}
                       </div>
                     </div>
                   );
@@ -707,7 +686,7 @@ export default function ProgressTable({
                 <p className="text-slate-400 italic text-center py-4">Belum ada riwayat catatan.</p>
               )}
             </div>
-            
+
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <textarea
