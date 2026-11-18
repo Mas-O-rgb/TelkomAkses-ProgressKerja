@@ -632,32 +632,37 @@ export default function ProgressTable({
                   const timeMatch = item.match(/\[([\d\/]+\s+[\d\.]+)\]/);
                   const timestamp = timeMatch ? timeMatch[1] : '';
 
-                  // 2. Ambil informasi pengirim (nama PIC atau Admin)
-                  // Mencari pola teks setelah waktu [..] sebelum tanda titik dua (:)
-                  let sender = 'Sistem';
+                  // 2. Tentukan Pengirim secara Akurat (Admin vs PIC)
+                  let sender = 'Hendra Hadiyatna Djatnika (Admin)';
                   const cleanItemWithoutUnread = item
                     .replace(/\[UNREAD_BY_ADMIN\]/g, '')
                     .replace(/\[UNREAD_BY_PIC\]/g, '')
                     .trim();
 
-                  if (cleanItemWithoutUnread.includes(':')) {
-                    const parts = cleanItemWithoutUnread.split(':');
-                    // Jika ada bagian waktu di depan, ambil nama pengirim sebelum tanda titik dua pesan
-                    const beforeColon = parts[0];
-                    if (beforeColon.includes(']')) {
-                      const afterBracket = beforeColon.split(']').pop()?.trim();
-                      if (afterBracket) sender = afterBracket;
-                    } else {
-                      sender = beforeColon.trim();
-                    }
+                  // Cek apakah string pesan mengandung nama PIC yang bertugas pada target ini
+                  const picName = activeHistoryTask.pic || '';
+                  const upperItem = cleanItemWithoutUnread.toUpperCase();
+                  const upperPic = picName.toUpperCase();
+
+                  if (
+                    (upperPic && upperItem.includes(upperPic)) ||
+                    upperItem.includes('KK:') ||
+                    upperItem.includes('KK :') ||
+                    cleanItemWithoutUnread.startsWith(picName)
+                  ) {
+                    // Jika pesan dikirim oleh PIC
+                    sender = `${picName} (PIC)`;
+                  } else {
+                    // Jika dikirim oleh Admin (Hendra Hadiyatna Djatnika)
+                    sender = 'Hendra Hadiyatna Djatnika (Admin)';
                   }
 
-                  // 3. Bersihkan isi teks pesan murni tanpa timestamp dan nama pengirim
+                  // 3. Bersihkan isi teks pesan murni dari timestamp dan format pengirim
                   let messageText = cleanItemWithoutUnread;
-                  if (messageText.includes(':')) {
-                    const colonIndex = messageText.indexOf(':');
-                    messageText = messageText.substring(colonIndex + 1).trim();
-                  }
+                  // Hapus bagian [tanggal jam] di depan jika ada
+                  messageText = messageText.replace(/^\[[\d\/]+\s+[\d\.]+\]\s*/, '');
+                  // Hapus bagian nama pengirim di depan jika ada (misal "HENDRA:", "KK:", atau nama PIC)
+                  messageText = messageText.replace(/^(HENDRA HADIYATNA DJATNIKA|HHTJTK|KK|[^:]+):\s*/i, '');
 
                   return (
                     <div
@@ -668,7 +673,7 @@ export default function ProgressTable({
                           : 'bg-slate-50 border-slate-200 text-slate-600'
                       }`}
                     >
-                      {/* Baris Atas: Badge Pesan Terbaru / Waktu & Nama Pengirim */}
+                      {/* Baris Atas: Waktu & Nama Pengirim */}
                       <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-slate-200/60 text-[10px]">
                         <span className="font-bold text-slate-700 flex items-center gap-1">
                           👤 {sender}
@@ -687,7 +692,7 @@ export default function ProgressTable({
 
                       {/* Isi Pesan */}
                       <div className="whitespace-pre-wrap leading-relaxed text-[11px] text-slate-800 font-normal">
-                        {messageText || cleanItemWithoutUnread}
+                        {messageText.trim() || cleanItemWithoutUnread}
                       </div>
                     </div>
                   );
@@ -696,7 +701,6 @@ export default function ProgressTable({
                 <p className="text-slate-400 italic text-center py-4">Belum ada riwayat catatan.</p>
               )}
             </div>
-
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <textarea
