@@ -169,10 +169,11 @@ export default function ProgressTable({
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
 
       if (editForm.keterangan && editForm.keterangan.trim() !== '') {
-        const modifier = isPicView ? `${editForm.pic}` : `HENDRA HADIYATNA DJATNIKA`;
+        // DINAMIS: Jika tampilan PIC, gunakan nama PIC dari form. Jika Admin, gunakan nama Admin.
+        const senderName = isPicView ? editForm.pic : 'Hendra Hadiyatna Djatnika';
         const unreadTag = isPicView ? '[UNREAD_BY_ADMIN]' : '[UNREAD_BY_PIC]';
 
-        const newEntry = `${unreadTag} [${timeString}] ${modifier}: ${editForm.keterangan.trim()}`;
+        const newEntry = `${unreadTag} [${timeString}] ${senderName}: ${editForm.keterangan.trim()}`;
 
         finalKeterangan =
           cleanOldKeterangan && cleanOldKeterangan !== '-'
@@ -210,10 +211,11 @@ export default function ProgressTable({
         .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
 
-      const modifier = isPicView ? `${originalTask.pic}` : `HENDRA HADIYATNA DJATNIKA`;
+      // DINAMIS: Deteksi pengirim saat membalas dari modal
+      const senderName = isPicView ? originalTask.pic : 'Hendra Hadiyatna Djatnika';
       const unreadTag = isPicView ? '[UNREAD_BY_ADMIN]' : '[UNREAD_BY_PIC]';
 
-      const newEntry = `${unreadTag} [${timeString}] ${modifier}: ${replyMessage.trim()}`;
+      const newEntry = `${unreadTag} [${timeString}] ${senderName}: ${replyMessage.trim()}`;
       const finalKeterangan =
         cleanOldKeterangan && cleanOldKeterangan !== '-'
           ? `${newEntry}\n────────────────\n${cleanOldKeterangan}`
@@ -224,7 +226,6 @@ export default function ProgressTable({
         keterangan: finalKeterangan,
       };
 
-      // Tandai bahwa pengirim sudah membaca pesannya sendiri
       setLocallyReadIds((prev) => [...prev.filter(id => id !== originalTask.id), originalTask.id]);
 
       setActiveHistoryTask(updatedData);
@@ -628,40 +629,39 @@ export default function ProgressTable({
             <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
               {activeHistoryTask.keterangan ? (
                 activeHistoryTask.keterangan.split('────────────────').map((item, idx) => {
-                  // 1. Ambil informasi waktu dari format [DD/MM/YYYY HH.MM]
                   const timeMatch = item.match(/\[([\d\/]+\s+[\d\.]+)\]/);
                   const timestamp = timeMatch ? timeMatch[1] : '';
 
-                  // 2. Tentukan Pengirim secara Akurat (Admin vs PIC)
                   let sender = 'Hendra Hadiyatna Djatnika (Admin)';
                   const cleanItemWithoutUnread = item
                     .replace(/\[UNREAD_BY_ADMIN\]/g, '')
                     .replace(/\[UNREAD_BY_PIC\]/g, '')
                     .trim();
 
-                  // Cek apakah string pesan mengandung nama PIC yang bertugas pada target ini
-                  const picName = activeHistoryTask.pic || '';
-                  const upperItem = cleanItemWithoutUnread.toUpperCase();
-                  const upperPic = picName.toUpperCase();
+                  // Ekstraksi nama pengirim dari format "[Waktu] Nama Pengirim: Pesan"
+                  if (cleanItemWithoutUnread.includes(':')) {
+                    const parts = cleanItemWithoutUnread.split(':');
+                    const beforeColon = parts[0];
+                    let rawSender = '';
+                    if (beforeColon.includes(']')) {
+                      rawSender = beforeColon.split(']').pop()?.trim() || '';
+                    } else {
+                      rawSender = beforeColon.trim();
+                    }
 
-                  if (
-                    (upperPic && upperItem.includes(upperPic)) ||
-                    upperItem.includes('KK:') ||
-                    upperItem.includes('KK :') ||
-                    cleanItemWithoutUnread.startsWith(picName)
-                  ) {
-                    // Jika pesan dikirim oleh PIC
-                    sender = `${picName} (PIC)`;
-                  } else {
-                    // Jika dikirim oleh Admin (Hendra Hadiyatna Djatnika)
-                    sender = 'Hendra Hadiyatna Djatnika (Admin)';
+                    // Jika pengirim adalah nama PIC yang bertugas pada target ini
+                    if (rawSender.toUpperCase() === (activeHistoryTask.pic || '').toUpperCase()) {
+                      sender = `${activeHistoryTask.pic} (PIC)`;
+                    } else if (rawSender.toUpperCase().includes('HENDRA') || rawSender.toUpperCase() === 'HHTJTK' || rawSender.toUpperCase() === 'KK') {
+                      sender = 'Hendra Hadiyatna Djatnika (Admin)';
+                    } else if (rawSender) {
+                      // Jika ada nama pengirim lain yang terekam
+                      sender = rawSender.toUpperCase().includes('ADMIN') ? 'Hendra Hadiyatna Djatnika (Admin)' : `${rawSender} (PIC)`;
+                    }
                   }
 
-                  // 3. Bersihkan isi teks pesan murni dari timestamp dan format pengirim
                   let messageText = cleanItemWithoutUnread;
-                  // Hapus bagian [tanggal jam] di depan jika ada
                   messageText = messageText.replace(/^\[[\d\/]+\s+[\d\.]+\]\s*/, '');
-                  // Hapus bagian nama pengirim di depan jika ada (misal "HENDRA:", "KK:", atau nama PIC)
                   messageText = messageText.replace(/^(HENDRA HADIYATNA DJATNIKA|HHTJTK|KK|[^:]+):\s*/i, '');
 
                   return (
@@ -673,7 +673,6 @@ export default function ProgressTable({
                           : 'bg-slate-50 border-slate-200 text-slate-600'
                       }`}
                     >
-                      {/* Baris Atas: Waktu & Nama Pengirim */}
                       <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-slate-200/60 text-[10px]">
                         <span className="font-bold text-slate-700 flex items-center gap-1">
                           👤 {sender}
@@ -690,7 +689,6 @@ export default function ProgressTable({
                         </div>
                       </div>
 
-                      {/* Isi Pesan */}
                       <div className="whitespace-pre-wrap leading-relaxed text-[11px] text-slate-800 font-normal">
                         {messageText.trim() || cleanItemWithoutUnread}
                       </div>
@@ -701,6 +699,7 @@ export default function ProgressTable({
                 <p className="text-slate-400 italic text-center py-4">Belum ada riwayat catatan.</p>
               )}
             </div>
+
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <textarea
