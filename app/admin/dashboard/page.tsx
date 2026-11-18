@@ -323,6 +323,24 @@ function AdminDashboardContent() {
     return Object.keys(counts).map(key => ({ name: key, value: counts[key], jumlah: counts[key] }));
   };
 
+  // Fungsi untuk menghapus tag unread di database secara permanen saat riwayat dibuka
+  const handleMarkAsRead = async (taskId: number, cleanedKeterangan: string) => {
+    /// 1. Update state lokal supaya tabel langsung merespons tanpa kedip
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, keterangan: cleanedKeterangan } : t))
+    );
+
+    // 2. Eksekusi update permanen ke database Supabase
+    const { error } = await supabase
+      .from('progress_targets')
+      .update({ keterangan: cleanedKeterangan })
+      .eq('id', taskId);
+
+    if (error) {
+      console.error('Gagal memperbarui status baca:', error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
       <Header 
@@ -362,6 +380,7 @@ function AdminDashboardContent() {
             setSearchTerm={setSearchTerm}
             onUpdateTask={handleUpdateTask}
             onDelete={handleDelete}
+            onMarkAsRead={handleMarkAsRead}
           />
         )}
       </main>

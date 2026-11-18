@@ -176,6 +176,24 @@ function PicDashboardContent() {
     }
   };
 
+  // Fungsi untuk menghapus tag unread di database secara permanen saat riwayat dibuka
+  const handleMarkAsRead = async (taskId: number, cleanedKeterangan: string) => {
+    /// 1. Update state lokal supaya tabel langsung merespons tanpa kedip
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, keterangan: cleanedKeterangan } : t))
+    );
+
+    // 2. Eksekusi update permanen ke database Supabase
+    const { error } = await supabase
+      .from('progress_targets')
+      .update({ keterangan: cleanedKeterangan })
+      .eq('id', taskId);
+
+    if (error) {
+      console.error('Gagal memperbarui status baca:', error.message);
+    }
+  };
+
   const handleLogout = () => {
     sessionStorage.clear();
     router.push('/');
@@ -202,6 +220,7 @@ function PicDashboardContent() {
             setSearchTerm={setSearchTerm}
             onUpdateTask={handleUpdateTask}
             isPicView={true}
+            onMarkAsRead={handleMarkAsRead}
           />
         )}
       </main>

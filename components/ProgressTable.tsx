@@ -26,6 +26,7 @@ interface ProgressTableProps {
   onUpdateTask?: (updatedTask: Task) => Promise<void> | void;
   onDelete?: (id: number) => Promise<void> | void;
   isPicView?: boolean;
+  onMarkAsRead?: (taskId: number, cleanedKeterangan: string) => Promise<void> | void;
 }
 
 const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
@@ -40,14 +41,13 @@ export default function ProgressTable({
   onUpdateTask,
   onDelete,
   isPicView = false,
+  onMarkAsRead,
 }: ProgressTableProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Menggunakan state mandiri untuk modal agar tidak ikut ter-reset/tertutup saat tabel di-refresh
   const [activeHistoryTask, setActiveHistoryTask] = useState<Task | null>(null);
-
   const [locallyReadIds, setLocallyReadIds] = useState<number[]>([]);
   const [replyMessage, setReplyMessage] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
@@ -60,14 +60,41 @@ export default function ProgressTable({
         setActiveHistoryTask(latestUpdated);
       }
     }
-  }, [tasks]);
+  }, [tasks, activeHistoryTask]);
 
-  const handleOpenHistory = (task: Task) => {
+  // PENTING: Otomatis hapus dari locallyReadIds jika ada pesan/tag unread baru masuk dari lawan bicara
+  useEffect(() => {
+    tasks.forEach(task => {
+      const unreadTag = isPicView ? '[UNREAD_BY_PIC]' : '[UNREAD_BY_ADMIN]';
+      const hasUnread = task.keterangan?.includes(unreadTag);
+      
+      if (hasUnread && locallyReadIds.includes(task.id)) {
+        // Jika database kembali memiliki tag unread, keluarkan dari locallyReadIds supaya badge BARU menyala lagi!
+        setLocallyReadIds(prev => prev.filter(id => id !== task.id));
+      }
+    });
+  }, [tasks, isPicView, locallyReadIds]);
+
+  const handleOpenHistory = async (task: Task) => {
     setActiveHistoryTask(task);
     setReplyMessage('');
 
-    if (!locallyReadIds.includes(task.id)) {
-      setLocallyReadIds((prev) => [...prev, task.id]);
+    const unreadTag = isPicView ? '[UNREAD_BY_PIC]' : '[UNREAD_BY_ADMIN]';
+    
+    if (task.keterangan && task.keterangan.includes(unreadTag)) {
+      const cleanedKeterangan = task.keterangan
+        .replace(new RegExp(`\\s*${unreadTag}\\s*`, 'g'), '')
+        .trim();
+
+      setActiveHistoryTask({ ...task, keterangan: cleanedKeterangan });
+      
+      if (!locallyReadIds.includes(task.id)) {
+        setLocallyReadIds((prev) => [...prev, task.id]);
+      }
+
+      if (onMarkAsRead) {
+        await onMarkAsRead(task.id, cleanedKeterangan);
+      }
     }
   };
 
@@ -159,14 +186,13 @@ export default function ProgressTable({
       };
 
       await onUpdateTask(updatedData);
-      setLocallyReadIds((prev) => prev.filter((id) => id !== editForm.id));
+      setLocallyReadIds((prev) => [...prev.filter((id) => id !== editForm.id), editForm.id]);
       setEditingId(null);
     } finally {
       setActionLoadingId(null);
     }
   };
 
-  // Fungsi mengirim balasan dari dalam modal tanpa menutup modal
   const handleSendReplyFromModal = async () => {
     if (!activeHistoryTask || !replyMessage.trim() || !onUpdateTask) return;
     setIsSendingReply(true);
@@ -179,6 +205,7 @@ export default function ProgressTable({
       })}`;
 
       const originalTask = activeHistoryTask;
+      
       const cleanOldKeterangan = (originalTask.keterangan || '-')
         .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
         .replace(/^\[UNREAD_BY_PIC\]\s*/g, '');
@@ -197,11 +224,11 @@ export default function ProgressTable({
         keterangan: finalKeterangan,
       };
 
-      // Update tampilan modal seketika secara lokal agar langsung responsif
+      // Tandai bahwa pengirim sudah membaca pesannya sendiri
+      setLocallyReadIds((prev) => [...prev.filter(id => id !== originalTask.id), originalTask.id]);
+
       setActiveHistoryTask(updatedData);
       setReplyMessage('');
-
-      // Kirim ke database (supabase)
       await onUpdateTask(updatedData);
     } finally {
       setIsSendingReply(false);
@@ -220,7 +247,6 @@ export default function ProgressTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-[11px]">
-      {/* Baris Filter & Pencarian */}
       <div className="p-3 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 bg-slate-50/50">
         <select
           value={filterKategori}
@@ -244,7 +270,6 @@ export default function ProgressTable({
         />
       </div>
 
-      {/* Tabel Data */}
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse table-auto">
           <thead>
@@ -277,7 +302,6 @@ export default function ProgressTable({
                   <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-2 px-1.5 text-center text-slate-500">{absoluteIndex}</td>
 
-                    {/* Kategori */}
                     <td className="py-2 px-1.5 font-semibold text-slate-700">
                       {isEditing && !isPicView ? (
                         <input
@@ -293,7 +317,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Rincian Target */}
                     <td className="py-2 px-2 font-medium text-slate-900">
                       {isEditing ? (
                         <input
@@ -309,7 +332,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Waktu Mulai */}
                     <td className="py-2 px-1.5 text-slate-600 whitespace-nowrap text-center">
                       {isEditing && !isPicView ? (
                         <input
@@ -323,7 +345,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Tenggat Waktu */}
                     <td className="py-2 px-1.5 text-slate-600 whitespace-nowrap text-center">
                       {isEditing && !isPicView ? (
                         <input
@@ -337,7 +358,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Progress */}
                     <td className="py-2 px-1.5 text-center">
                       {isEditing ? (
                         <select
@@ -358,7 +378,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Status */}
                     <td className="py-2 px-1.5 text-center whitespace-nowrap">
                       <span
                         className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold border ${statusInfo.className}`}
@@ -367,7 +386,6 @@ export default function ProgressTable({
                       </span>
                     </td>
 
-                    {/* PIC */}
                     <td className="py-2 px-1.5 text-slate-700 font-medium text-center">
                       {isEditing && !isPicView ? (
                         <select
@@ -386,7 +404,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Keterangan */}
                     <td className="py-1.5 px-1.5 text-slate-600 align-top text-[10.5px]">
                       {isEditing ? (
                         <div className="relative h-6 w-28">
@@ -416,9 +433,8 @@ export default function ProgressTable({
                           {task.keterangan &&
                             task.keterangan !== '-' &&
                             (() => {
-                              const hasUnreadTag = isPicView
-                                ? task.keterangan.startsWith('[UNREAD_BY_PIC]')
-                                : task.keterangan.startsWith('[UNREAD_BY_ADMIN]');
+                              const unreadTag = isPicView ? '[UNREAD_BY_PIC]' : '[UNREAD_BY_ADMIN]';
+                              const hasUnreadTag = task.keterangan.includes(unreadTag);
                               const showNewBadge =
                                 hasUnreadTag && !locallyReadIds.includes(task.id);
                               const totalUpdates =
@@ -453,7 +469,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Dokumen */}
                     <td className="py-2 px-1.5 text-slate-700">
                       {isEditing ? (
                         <input
@@ -477,7 +492,6 @@ export default function ProgressTable({
                       )}
                     </td>
 
-                    {/* Aksi */}
                     <td className="py-2 px-1.5 text-center whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
                         {isEditing ? (
@@ -556,7 +570,6 @@ export default function ProgressTable({
         </table>
       </div>
 
-      {/* Kontrol Navigasi Paginasi */}
       <div className="p-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 bg-slate-50/50 text-[11px] text-slate-600">
         <div>
           Menampilkan{' '}
@@ -591,7 +604,6 @@ export default function ProgressTable({
         </div>
       </div>
 
-      {/* Modal Popup Riwayat Keterangan dengan Kolom Balas Pesan */}
       {activeHistoryTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[85vh]">
@@ -613,30 +625,70 @@ export default function ProgressTable({
               </button>
             </div>
 
-            {/* List Riwayat Pesan */}
-            <div className="p-4 overflow-y-auto space-y-2.5 text-xs flex-1">
+            <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
               {activeHistoryTask.keterangan ? (
                 activeHistoryTask.keterangan.split('────────────────').map((item, idx) => {
-                  const cleanedItemText = item
-                    .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
-                    .replace(/^\[UNREAD_BY_PIC\]\s*/g, '')
+                  // 1. Ambil informasi waktu dari format [DD/MM/YYYY HH.MM]
+                  const timeMatch = item.match(/\[([\d\/]+\s+[\d\.]+)\]/);
+                  const timestamp = timeMatch ? timeMatch[1] : '';
+
+                  // 2. Ambil informasi pengirim (nama PIC atau Admin)
+                  // Mencari pola teks setelah waktu [..] sebelum tanda titik dua (:)
+                  let sender = 'Sistem';
+                  const cleanItemWithoutUnread = item
+                    .replace(/\[UNREAD_BY_ADMIN\]/g, '')
+                    .replace(/\[UNREAD_BY_PIC\]/g, '')
                     .trim();
+
+                  if (cleanItemWithoutUnread.includes(':')) {
+                    const parts = cleanItemWithoutUnread.split(':');
+                    // Jika ada bagian waktu di depan, ambil nama pengirim sebelum tanda titik dua pesan
+                    const beforeColon = parts[0];
+                    if (beforeColon.includes(']')) {
+                      const afterBracket = beforeColon.split(']').pop()?.trim();
+                      if (afterBracket) sender = afterBracket;
+                    } else {
+                      sender = beforeColon.trim();
+                    }
+                  }
+
+                  // 3. Bersihkan isi teks pesan murni tanpa timestamp dan nama pengirim
+                  let messageText = cleanItemWithoutUnread;
+                  if (messageText.includes(':')) {
+                    const colonIndex = messageText.indexOf(':');
+                    messageText = messageText.substring(colonIndex + 1).trim();
+                  }
 
                   return (
                     <div
                       key={idx}
-                      className={`p-2.5 rounded-lg border whitespace-pre-wrap leading-relaxed text-[11px] ${
+                      className={`p-3 rounded-xl border transition-all ${
                         idx === 0
-                          ? 'bg-green-50/60 border-green-400 text-slate-800 shadow-2xs'
-                          : 'bg-slate-50 border-slate-100 text-slate-600'
+                          ? 'bg-green-50/80 border-green-400 text-slate-800 shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-600'
                       }`}
                     >
-                      {idx === 0 && (
-                        <span className="inline-block mb-1 px-1.5 py-0.5 bg-[#2fd800] text-white text-[9px] font-bold rounded uppercase tracking-wider">
-                          Pesan Terbaru
+                      {/* Baris Atas: Badge Pesan Terbaru / Waktu & Nama Pengirim */}
+                      <div className="flex justify-between items-center mb-1.5 pb-1 border-b border-slate-200/60 text-[10px]">
+                        <span className="font-bold text-slate-700 flex items-center gap-1">
+                          👤 {sender}
                         </span>
-                      )}
-                      <div>{cleanedItemText}</div>
+                        <div className="flex items-center gap-2">
+                          {timestamp && (
+                            <span className="text-slate-400 font-medium">🕒 {timestamp}</span>
+                          )}
+                          {idx === 0 && (
+                            <span className="px-1.5 py-0.2 bg-[#2fd800] text-white text-[8.5px] font-bold rounded uppercase tracking-wider">
+                              Pesan Terbaru
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Isi Pesan */}
+                      <div className="whitespace-pre-wrap leading-relaxed text-[11px] text-slate-800 font-normal">
+                        {messageText || cleanItemWithoutUnread}
+                      </div>
                     </div>
                   );
                 })
@@ -645,7 +697,6 @@ export default function ProgressTable({
               )}
             </div>
 
-            {/* Kolom Input Balasan Pesan & Tombol Kirim di Bagian Bawah Modal */}
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <textarea
