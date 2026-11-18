@@ -626,7 +626,7 @@ export default function ProgressTable({
               </button>
             </div>
 
-           <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
+            <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
               {activeHistoryTask.keterangan ? (
                 activeHistoryTask.keterangan.split('────────────────').map((item, idx) => {
                   const timeMatch = item.match(/\[([\d\/]+\s+[\d\.]+)\]/);
@@ -635,19 +635,20 @@ export default function ProgressTable({
                   // 1. Bersihkan tag unread
                   const cleanItem = item.replace(/\[UNREAD_BY_(ADMIN|PIC)\]/g, '').trim();
 
-                  // 2. Ambil nama pengirim langsung dari format "[waktu] Nama Pengirim: Pesan"
+                  // 2. Ekstrak nama pengirim mentah dari format "[waktu] Nama Pengirim: Pesan"
                   const colonIndex = cleanItem.indexOf(':');
                   const rawSender =
                     colonIndex !== -1
-                      ? cleanItem.slice(0, colonIndex).replace(/^\[.*?\]\s*/, '').trim()
+                      ? cleanItem.slice(0, colonIndex).replace(/\[.*?\]/g, '').trim()
                       : '';
 
+                  // 3. Tentukan nama lengkap tanpa tambahan "(PIC)" atau "(Admin)"
                   const isAdmin = rawSender.toUpperCase().includes('HENDRA');
                   const sender = isAdmin
-                    ? 'Hendra Hadiyatna Djatnika (Admin)'
-                    : `${rawSender || activeHistoryTask.pic} (PIC)`;
+                    ? 'Hendra Hadiyatna Djatnika'
+                    : activeHistoryTask.pic;
 
-                  // 3. Ambil isi pesan murni
+                  // 4. Ambil isi pesan murni
                   const messageText =
                     colonIndex !== -1 ? cleanItem.slice(colonIndex + 1).trim() : cleanItem;
 
