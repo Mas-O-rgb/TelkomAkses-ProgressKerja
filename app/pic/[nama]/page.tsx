@@ -219,8 +219,8 @@ function PicDashboardContent() {
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             onUpdateTask={handleUpdateTask}
-            isPicView={true}
             onMarkAsRead={handleMarkAsRead}
+            isPicView={true}
           />
         )}
       </main>

@@ -632,37 +632,45 @@ export default function ProgressTable({
                   const timeMatch = item.match(/\[([\d\/]+\s+[\d\.]+)\]/);
                   const timestamp = timeMatch ? timeMatch[1] : '';
 
-                  let sender = 'Hendra Hadiyatna Djatnika (Admin)';
                   const cleanItemWithoutUnread = item
                     .replace(/\[UNREAD_BY_ADMIN\]/g, '')
                     .replace(/\[UNREAD_BY_PIC\]/g, '')
                     .trim();
 
-                  // Ekstraksi nama pengirim dari format "[Waktu] Nama Pengirim: Pesan"
+                  // Ekstraksi nama pengirim mentah dari format "[Waktu] Nama Pengirim: Pesan"
+                  let rawSender = '';
                   if (cleanItemWithoutUnread.includes(':')) {
-                    const parts = cleanItemWithoutUnread.split(':');
-                    const beforeColon = parts[0];
-                    let rawSender = '';
-                    if (beforeColon.includes(']')) {
-                      rawSender = beforeColon.split(']').pop()?.trim() || '';
-                    } else {
-                      rawSender = beforeColon.trim();
-                    }
-
-                    // Jika pengirim adalah nama PIC yang bertugas pada target ini
-                    if (rawSender.toUpperCase() === (activeHistoryTask.pic || '').toUpperCase()) {
-                      sender = `${activeHistoryTask.pic} (PIC)`;
-                    } else if (rawSender.toUpperCase().includes('HENDRA') || rawSender.toUpperCase() === 'HHTJTK' || rawSender.toUpperCase() === 'KK') {
-                      sender = 'Hendra Hadiyatna Djatnika (Admin)';
-                    } else if (rawSender) {
-                      // Jika ada nama pengirim lain yang terekam
-                      sender = rawSender.toUpperCase().includes('ADMIN') ? 'Hendra Hadiyatna Djatnika (Admin)' : `${rawSender} (PIC)`;
-                    }
+                    const beforeColon = cleanItemWithoutUnread.split(':')[0];
+                    rawSender = beforeColon.includes(']')
+                      ? beforeColon.split(']').pop()?.trim() || ''
+                      : beforeColon.trim();
                   }
 
-                  let messageText = cleanItemWithoutUnread;
-                  messageText = messageText.replace(/^\[[\d\/]+\s+[\d\.]+\]\s*/, '');
-                  messageText = messageText.replace(/^(HENDRA HADIYATNA DJATNIKA|HHTJTK|KK|[^:]+):\s*/i, '');
+                  // Tentukan label pengirim berdasarkan nama yang terekam
+                  let sender = '';
+                  const upperRaw = rawSender.toUpperCase();
+
+                  if (
+                    upperRaw.includes('HENDRA') ||
+                    upperRaw === 'HHTJTK' ||
+                    upperRaw === 'ADMIN'
+                  ) {
+                    sender = 'Hendra Hadiyatna Djatnika (Admin)';
+                  } else if (upperRaw === 'KK') {
+                    // Data tes lama dengan inisial KK dialihkan ke nama PIC target
+                    sender = `${activeHistoryTask.pic} (PIC)`;
+                  } else if (rawSender) {
+                    // Tampilkan nama asli yang terekam (misal nama PIC yang bersangkutan)
+                    sender = `${rawSender} (PIC)`;
+                  } else {
+                    // Fallback jika pesan lama tidak memiliki nama pengirim sama sekali
+                    sender = `${activeHistoryTask.pic} (PIC)`;
+                  }
+
+                  // Bersihkan isi teks pesan murni
+                  let messageText = cleanItemWithoutUnread
+                    .replace(/^\[[\d\/]+\s+[\d\.]+\]\s*/, '')
+                    .replace(/^[^:]+:\s*/, '');
 
                   return (
                     <div
@@ -699,7 +707,7 @@ export default function ProgressTable({
                 <p className="text-slate-400 italic text-center py-4">Belum ada riwayat catatan.</p>
               )}
             </div>
-
+            
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <textarea
