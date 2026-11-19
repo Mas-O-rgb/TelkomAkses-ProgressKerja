@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { ShieldCheck, UserCheck, LogOut, ArrowLeft } from 'lucide-react';
-import ConfirmModal from '@/components/ConfirmModal'; // <-- 1. Import ConfirmModal
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface HeaderProps {
   title: string;
@@ -13,6 +13,10 @@ interface HeaderProps {
   onBack?: () => void;
 }
 
+/**
+ * Header tetap (fixed top) untuk halaman Admin dan PIC, lengkap dengan
+ * logo perusahaan, informasi peran/sapaan, serta modal konfirmasi keluar/ganti akun.
+ */
 export default function Header({
   title,
   subtitle,
@@ -20,17 +24,25 @@ export default function Header({
   onLogout,
   onBack,
 }: HeaderProps) {
-  // 2. State untuk mengontrol pop-up konfirmasi keluar
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // Sesuaikan teks pesan dan tombol berdasarkan peran pengguna
+  const logoutMessage =
+    role === 'admin'
+      ? 'Apakah Anda yakin ingin keluar dari Panel Admin?'
+      : 'Apakah Anda yakin ingin mengganti akun PIC?';
+
+  const logoutButtonLabel = role === 'admin' ? 'Keluar' : 'Ganti Akun';
 
   return (
     <>
       <header className="bg-slate-950 border-b-4 border-[#ED1E28] shadow-xl fixed top-0 left-0 w-full z-50">
         <div className="max-w-[96%] mx-auto px-4 py-4 flex justify-between items-center">
+          {/* Bagian kiri: tombol kembali opsional, logo, judul, dan sapaan/peran */}
           <div className="flex items-center gap-3">
-            {/* Tombol Kembali (Opsional, biasa dipakai di panel PIC) */}
             {onBack && (
-              <button 
+              <button
+                type="button"
                 onClick={onBack}
                 className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer transition-all"
                 title="Kembali"
@@ -39,13 +51,12 @@ export default function Header({
               </button>
             )}
 
-            {/* Logo Kotak Gambar "TA" */}
             <div className="logo">
-              <Image 
-                src="/telkom_akses.png" 
-                alt="Logo Telkom Akses" 
-                width={120} 
-                height={120} 
+              <Image
+                src="/telkom_akses.png"
+                alt="Logo Telkom Akses"
+                width={120}
+                height={120}
                 className="object-contain"
                 priority
               />
@@ -66,24 +77,25 @@ export default function Header({
             </div>
           </div>
 
-          {/* Tombol Keluar / Ganti Akun memicu Modal */}
-          <button 
-            onClick={() => setShowLogoutModal(true)}
+          {/* Tombol pemicu modal konfirmasi keluar / ganti akun */}
+          <button
+            type="button"
+            onClick={() => setIsLogoutModalOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer border border-slate-700 transition-all shadow-sm"
           >
-            <LogOut size={14} /> {role === 'admin' ? 'Keluar' : 'Ganti Akun'}
+            <LogOut size={14} /> {logoutButtonLabel}
           </button>
         </div>
       </header>
 
-      {/* Komponen Pop-up Konfirmasi Kustom */}
-      <ConfirmModal 
-        isOpen={showLogoutModal}
+      {/* Modal konfirmasi sebelum mengeksekusi onLogout */}
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
         title="Konfirmasi Keluar"
-        message={role === 'admin' ? "Apakah Anda yakin ingin keluar dari Panel Admin?" : "Apakah Anda yakin ingin mengganti akun PIC?"}
+        message={logoutMessage}
         confirmText="Ya, Keluar"
         cancelText="Batal"
-        onClose={() => setShowLogoutModal(false)}
+        onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={onLogout}
       />
     </>

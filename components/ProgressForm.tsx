@@ -3,19 +3,39 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { DAFTAR_PIC } from '@/utils/helpers';
+import type { Task } from '@/components/ProgressTable';
+
+export interface TargetFormData {
+  kategori: string;
+  namaTarget: string;
+  waktuMulai: string;
+  tenggatWaktu: string;
+  progress: number;
+  pic: string;
+  keterangan: string;
+  dokumen: File | string | null;
+}
 
 interface ProgressFormProps {
-  formData: any;
-  setFormData: (data: any) => void;
-  currentTask: any;
+  formData: TargetFormData;
+  setFormData: React.Dispatch<React.SetStateAction<TargetFormData>>;
+  currentTask: Task | null; // sebelumnya: Record<string, unknown> | null
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
   loading: boolean;
   isAdmin?: boolean;
 }
 
+// Pilihan persentase progress kelipatan 10%
 const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
+// Gaya input standar agar konsisten di seluruh field form
+const FIELD_INPUT_CLASS =
+  'w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]';
+
+/**
+ * Form input untuk menambah target baru atau mengedit target yang sedang dipilih (khusus Admin).
+ */
 export default function ProgressForm({
   formData,
   setFormData,
@@ -25,10 +45,15 @@ export default function ProgressForm({
   loading,
   isAdmin = true,
 }: ProgressFormProps) {
+  // Sembunyikan form jika bukan mode Admin
   if (!isAdmin) return null;
 
-  const inputClass =
-    'w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30 focus:border-[#ED1E28]';
+  // Tentukan label tombol submit sesuai status loading dan mode edit/tambah
+  const submitButtonLabel = loading
+    ? 'Menyimpan Data...'
+    : currentTask
+      ? 'Update Target'
+      : 'Tambah Target';
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
@@ -37,7 +62,7 @@ export default function ProgressForm({
       </h2>
 
       <form onSubmit={onSubmit} className="space-y-4">
-        {/* BARIS 1: Kategori, Rincian Target, Waktu Mulai, Tenggat Waktu */}
+        {/* Baris 1: Kategori, Rincian Target, Waktu Mulai, dan Due Date */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
@@ -48,7 +73,7 @@ export default function ProgressForm({
               placeholder="Contoh: QMS, HSE..."
               value={formData.kategori}
               onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-              className={inputClass}
+              className={FIELD_INPUT_CLASS}
             />
           </div>
 
@@ -61,7 +86,7 @@ export default function ProgressForm({
               placeholder="Ketik rincian target..."
               value={formData.namaTarget}
               onChange={(e) => setFormData({ ...formData, namaTarget: e.target.value })}
-              className={inputClass}
+              className={FIELD_INPUT_CLASS}
             />
           </div>
 
@@ -73,7 +98,7 @@ export default function ProgressForm({
               type="date"
               value={formData.waktuMulai}
               onChange={(e) => setFormData({ ...formData, waktuMulai: e.target.value })}
-              className={inputClass}
+              className={FIELD_INPUT_CLASS}
             />
           </div>
 
@@ -85,12 +110,12 @@ export default function ProgressForm({
               type="date"
               value={formData.tenggatWaktu}
               onChange={(e) => setFormData({ ...formData, tenggatWaktu: e.target.value })}
-              className={inputClass}
+              className={FIELD_INPUT_CLASS}
             />
           </div>
         </div>
 
-        {/* BARIS 2: Progress (%), PIC, Keterangan, Dokumen */}
+        {/* Baris 2: Progress, PIC, Keterangan opsional, dan upload Dokumen opsional */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
@@ -99,11 +124,11 @@ export default function ProgressForm({
             <select
               value={formData.progress}
               onChange={(e) => setFormData({ ...formData, progress: Number(e.target.value) })}
-              className={inputClass}
+              className={FIELD_INPUT_CLASS}
             >
-              {PROGRESS_OPTIONS.map((val) => (
-                <option key={val} value={val}>
-                  {val}%
+              {PROGRESS_OPTIONS.map((progressValue) => (
+                <option key={progressValue} value={progressValue}>
+                  {progressValue}%
                 </option>
               ))}
             </select>
@@ -116,11 +141,11 @@ export default function ProgressForm({
             <select
               value={formData.pic}
               onChange={(e) => setFormData({ ...formData, pic: e.target.value })}
-              className={inputClass}
+              className={FIELD_INPUT_CLASS}
             >
-              {DAFTAR_PIC.map((namaPic) => (
-                <option key={namaPic} value={namaPic}>
-                  {namaPic}
+              {DAFTAR_PIC.map((picName) => (
+                <option key={picName} value={picName}>
+                  {picName}
                 </option>
               ))}
             </select>
@@ -128,20 +153,26 @@ export default function ProgressForm({
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Keterangan / Catatan <span className="text-[10px] text-slate-400 font-normal ml-0.5 align-baseline">(Opsional)</span>
+              Keterangan / Catatan{' '}
+              <span className="text-[10px] text-slate-400 font-normal ml-0.5 align-baseline">
+                (Opsional)
+              </span>
             </label>
             <textarea
               rows={1}
               placeholder="Catatan tambahan..."
               value={formData.keterangan || ''}
               onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-              className={`${inputClass} transition-all duration-200 focus:h-20 resize-none`}
+              className={`${FIELD_INPUT_CLASS} transition-all duration-200 focus:h-20 resize-none`}
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
-              Dokumen <span className="text-[10px] text-slate-400 font-normal ml-0.5 align-baseline">(Opsional)</span>
+              Dokumen{' '}
+              <span className="text-[10px] text-slate-400 font-normal ml-0.5 align-baseline">
+                (Opsional)
+              </span>
             </label>
             <input
               type="file"
@@ -151,7 +182,7 @@ export default function ProgressForm({
           </div>
         </div>
 
-        {/* Tombol Submit dengan Indikator Visual Loading */}
+        {/* Tombol batal (saat mode edit) dan tombol simpan */}
         <div className="flex justify-end gap-2 pt-2">
           {currentTask && !loading && (
             <button
@@ -169,7 +200,7 @@ export default function ProgressForm({
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#ED1E28] hover:bg-[#d41922] disabled:bg-slate-400 text-white rounded-lg text-xs font-bold cursor-pointer disabled:cursor-not-allowed transition-all shadow-sm"
           >
             {loading && <Loader2 size={14} className="animate-spin" />}
-            {loading ? 'Menyimpan Data...' : currentTask ? 'Update Target' : 'Tambah Target'}
+            {submitButtonLabel}
           </button>
         </div>
       </form>

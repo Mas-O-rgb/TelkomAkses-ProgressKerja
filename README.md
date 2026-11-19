@@ -4,6 +4,17 @@
 3. git push origin main
 4. git push origin main --force
 
+// Akan terkompres .zip jika mendownload semua file/dookumen
+1. Install "npm install jszip"
+2. Implementasi di components/ProgressTable.tsx
+		"import JSZip from 'jszip';"
+		"import { Save, X, FileText, Loader2, ChevronLeft, ChevronRight, Send, Download, Archive } from 'lucide-react';"
+3. Implementasi di components/ProgressTable.tsx
+		"const [isDownloadingZip, setIsDownloadingZip] = useState(false);"
+4. Tambahkan fungsi helper untuk mengunduh semua file yang valid menjadi .zip
+5. Menambahkan tombol di footer modal preview
+
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
