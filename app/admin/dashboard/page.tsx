@@ -456,7 +456,7 @@ function AdminDashboardContent() {
 }
 
 // Dibungkus Suspense untuk mendukung kompatibilitas Next.js App Router
-function AdminDashboard() {
+export default function AdminDashboard() {
   return (
     <Suspense
       fallback={
