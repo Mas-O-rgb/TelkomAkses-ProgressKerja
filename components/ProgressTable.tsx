@@ -723,7 +723,7 @@ export default function ProgressTable({
                           onChange={(e) =>
                             setEditForm({ ...editForm, fileDokumen: e.target.files?.[0] || null })
                           }
-                          className="w-28 text-[9px] text-slate-600 file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:bg-slate-200 file:text-slate-700 cursor-pointer"
+                          className="w-28 text-[9px] text-slate-600 file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:bg-slate-200 file:text-slate-600 file:cursor-pointer hover:file:bg-slate-400 hover:file:text-slate-900 file:transition-all file:transition-colors cursor-pointer"
                         />
                       ) : hasDocumentLink(task.dokumen) ? (
                         <button

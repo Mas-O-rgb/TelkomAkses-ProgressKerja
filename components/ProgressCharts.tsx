@@ -1,23 +1,23 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-  LineChart,
-  Line,
   BarChart,
   Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+  AreaChart,
+  Area,
 } from 'recharts';
 
-interface ChartItem {
+interface ChartDataItem {
   name: string;
   value: number;
   jumlah?: number;
@@ -27,200 +27,237 @@ interface StackedPicStatusItem {
   name: string;
   'BELUM DIKERJAKAN': number;
   'ON PROGRESS': number;
-  OVERDUE: number;
+  'OVERDUE': number;
   'SUDAH SELESAI': number;
 }
 
-interface TaskLike {
+interface TaskItem {
   tenggatWaktu?: string;
-  tenggat_waktu?: string;
 }
 
 interface ProgressChartsProps {
-  pieDataStatus: ChartItem[];
-  pieDataKategori: ChartItem[];
-  barDataPic?: ChartItem[];
-  stackedDataPicStatus?: StackedPicStatusItem[];
-  tasks?: TaskLike[];
+  pieDataStatus: ChartDataItem[];
+  pieDataKategori: ChartDataItem[];
+  barDataPic: ChartDataItem[];
+  stackedDataPicStatus: StackedPicStatusItem[];
+  tasks: TaskItem[];
 }
-
-// Palet warna kategori target dan pemetaan warna per status pengerjaan
-const CATEGORY_COLORS = ['#94a3b8', '#ED1E28', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
 
 const STATUS_COLORS: Record<string, string> = {
   'SUDAH SELESAI': '#10b981',
-  OVERDUE: '#ED1E28',
+  'OVERDUE': '#ED1E28',
   'ON PROGRESS': '#f59e0b',
   'BELUM DIKERJAKAN': '#94a3b8',
 };
 
-const getStatusColor = (statusName: string): string => STATUS_COLORS[statusName] ?? '#94a3b8';
+const KATEGORI_COLORS = ['#64748b', '#ef4444', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
-/**
- * Komponen visualisasi grafik ringkasan target:
- * - Donut chart distribusi status target
- * - Donut chart kategori target
- * - Line chart tren jumlah target berdasarkan tanggal deadline
- * - Horizontal stacked bar chart rincian status per PIC
- */
 export default function ProgressCharts({
   pieDataStatus,
   pieDataKategori,
-  stackedDataPicStatus = [],
-  tasks = [],
+  stackedDataPicStatus,
+  tasks,
 }: ProgressChartsProps) {
-  // Kelompokkan dan urutkan jumlah target per tanggal deadline untuk line chart
-  const deadlineTrendData = useMemo(() => {
-    if (!tasks || tasks.length === 0) return [];
+  // Agregasi jumlah target berdasarkan tanggal deadline
+  const deadlineCounts = tasks.reduce<Record<string, number>>((acc, task) => {
+    if (task.tenggatWaktu) {
+      acc[task.tenggatWaktu] = (acc[task.tenggatWaktu] || 0) + 1;
+    }
+    return acc;
+  }, {});
 
-    const countByDeadline: Record<string, number> = {};
-    tasks.forEach((task) => {
-      // Mendukung kedua format nama properti (camelCase maupun snake_case)
-      const deadlineDate = task.tenggatWaktu || task.tenggat_waktu;
-      if (deadlineDate) {
-        countByDeadline[deadlineDate] = (countByDeadline[deadlineDate] || 0) + 1;
-      }
-    });
+  const trendDeadlineData = Object.keys(deadlineCounts)
+    .sort()
+    .map((date) => ({
+      tanggal: date.slice(5), // Tampilkan MM-DD agar ringkas
+      jumlah: deadlineCounts[date],
+    }));
 
-    return Object.keys(countByDeadline)
-      .sort()
-      .map((date) => ({
-        tanggal: date,
-        jumlah: countByDeadline[date],
-      }));
-  }, [tasks]);
+  const totalTasks = tasks.length;
 
   return (
     <div className="space-y-6">
-      {/* Baris atas: 3 grafik ringkasan utama */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Grafik 1: Distribusi Status Target */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 text-center mb-4">
-            Distribusi Status Target
-          </h3>
-          <div className="h-64 w-full">
+      {/* Baris Atas: 3 Grafik Ringkas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 1. Distribusi Status */}
+        <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Distribusi Status
+            </h3>
+            <span className="text-[10px] font-medium text-slate-400">Total: {totalTasks}</span>
+          </div>
+          <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieDataStatus}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
-                  paddingAngle={4}
+                  cy="45%"
+                  innerRadius={40}
+                  outerRadius={56}
+                  paddingAngle={3}
                   dataKey="value"
-                  label={({ percent }: { percent?: number }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                  stroke="none"
                 >
-                  {pieDataStatus.map((entry, index) => (
-                    <Cell key={`status-cell-${index}`} fill={getStatusColor(entry.name)} />
+                  {pieDataStatus.map((entry, idx) => (
+                    <Cell key={idx} fill={STATUS_COLORS[entry.name] || '#cbd5e1'} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={6}
+                  wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          {/* Legenda manual untuk grafik status */}
-          <div className="flex flex-wrap justify-center gap-3 mt-2 text-[11px] font-semibold text-slate-600">
-            {pieDataStatus.map((entry, index) => (
-              <div key={`status-legend-${index}`} className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: getStatusColor(entry.name) }}
-                />
-                <span>{entry.name}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Grafik 2: Distribusi Kategori */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 text-center mb-4">
-            Kategori
-          </h3>
-          <div className="h-64 w-full">
+        {/* 2. Kategori */}
+        <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Kategori Target
+            </h3>
+            <span className="text-[10px] font-medium text-slate-400">
+              {pieDataKategori.length} Kategori
+            </span>
+          </div>
+          <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieDataKategori}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
-                  paddingAngle={4}
+                  cy="45%"
+                  innerRadius={40}
+                  outerRadius={56}
+                  paddingAngle={3}
                   dataKey="value"
+                  stroke="none"
                 >
-                  {pieDataKategori.map((_, index) => (
-                    <Cell
-                      key={`category-cell-${index}`}
-                      fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                    />
+                  {pieDataKategori.map((_, idx) => (
+                    <Cell key={idx} fill={KATEGORI_COLORS[idx % KATEGORI_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={6}
+                  wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          {/* Legenda manual untuk grafik kategori */}
-          <div className="flex flex-wrap justify-center gap-2 mt-2 text-[11px] font-semibold text-slate-600">
-            {pieDataKategori.map((entry, index) => (
-              <div key={`category-legend-${index}`} className="flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
-                />
-                <span>{entry.name}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Grafik 3: Tren Tenggat Waktu (Deadline) */}
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 text-center mb-4">
-            Tren Tenggat Waktu (Deadline)
-          </h3>
-          <div className="h-64 w-full">
+        {/* 3. Tren Deadline */}
+        <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Tren Deadline
+            </h3>
+            <span className="text-[10px] font-medium text-slate-400">Per Tanggal</span>
+          </div>
+          <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={deadlineTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="tanggal" tick={{ fontSize: 10 }} stroke="#64748b" />
-                <YAxis tick={{ fontSize: 10 }} stroke="#64748b" allowDecimals={false} />
-                <Tooltip />
-                <Line
+              <AreaChart data={trendDeadlineData} margin={{ top: 8, right: 10, left: -24, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="deadlineFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ED1E28" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="#ED1E28" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="tanggal"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                />
+                <Tooltip
+                  contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+                <Area
                   type="monotone"
                   dataKey="jumlah"
-                  name="Jumlah Target"
+                  name="Target"
                   stroke="#ED1E28"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#ED1E28' }}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={2}
+                  fill="url(#deadlineFill)"
+                  dot={{ r: 3, fill: '#ED1E28', strokeWidth: 0 }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* Baris bawah: rincian status pengerjaan per PIC */}
+      {/* Baris Bawah: Status Pengerjaan per PIC */}
       {stackedDataPicStatus.length > 0 && (
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-4 text-center">
-            Status Pengerjaan per PIC (Rincian)
-          </h3>
-          <div className="h-72 w-full">
+        <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Status Pengerjaan per PIC
+            </h3>
+            <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#94a3b8]" /> Belum Dikerjakan
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#f59e0b]" /> On Progress
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#ED1E28]" /> Overdue
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#10b981]" /> Sudah Selesai
+              </span>
+            </div>
+          </div>
+
+          <div className="h-52 w-full ">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stackedDataPicStatus} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="SUDAH SELESAI" stackId="a" fill="#10b981" barSize={22} />
-                <Bar dataKey="ON PROGRESS" stackId="a" fill="#f59e0b" barSize={22} />
-                <Bar dataKey="OVERDUE" stackId="a" fill="#ED1E28" barSize={22} />
-                <Bar dataKey="BELUM DIKERJAKAN" stackId="a" fill="#94a3b8" barSize={22} />
+              <BarChart
+                data={stackedDataPicStatus}
+                barGap={6}
+                barCategoryGap="24%"
+                margin={{ top: 6, right: 8, left: -24, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#475569' }}
+                  tickFormatter={(val: string) => val.split(' ')[0]} // Tampilkan nama depan di sumbu X agar rapi
+                />
+                <YAxis
+                  allowDecimals={false}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                />
+                <Tooltip
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+                <Bar dataKey="BELUM DIKERJAKAN" name="Belum Dikerjakan" fill="#94a3b8" barSize={30} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="ON PROGRESS" name="On Progress" fill="#f59e0b" barSize={30} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="OVERDUE" name="Overdue" fill="#ED1E28" barSize={30} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="SUDAH SELESAI" name="Sudah Selesai" fill="#10b981" barSize={30} radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

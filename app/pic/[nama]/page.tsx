@@ -98,21 +98,27 @@ function PicDashboardContent() {
   }, []);
 
   // Ambil daftar target khusus untuk PIC yang sedang dibuka
-  const fetchTasksForPIC = useCallback(async () => {
-    if (!picName) return;
+  const fetchTasksForPIC = useCallback(async (silent = false) => {
+  if (!picName) return;
 
+  if (!silent) {
     setLoading(true);
-    const { data } = await supabase
-      .from(TARGET_TABLE_NAME)
-      .select('*')
-      .eq('pic', picName)
-      .order('id', { ascending: false });
+  }
 
-    if (data) {
-      setTasks((data as ProgressTargetRow[]).map(mapRowToTask));
-    }
+  const { data } = await supabase
+    .from(TARGET_TABLE_NAME)
+    .select('*')
+    .eq('pic', picName)
+    .order('id', { ascending: false });
+
+  if (data) {
+    setTasks((data as ProgressTargetRow[]).map(mapRowToTask));
+  }
+
+  if (!silent) {
     setLoading(false);
-  }, [picName]);
+  }
+}, [picName]);
 
   // Muat data awal & dengarkan perubahan Supabase Realtime khusus milik PIC ini
   useEffect(() => {
@@ -216,7 +222,7 @@ function PicDashboardContent() {
       if (error) {
         alert('Gagal memperbarui progress: ' + error.message);
       } else {
-        await fetchTasksForPIC();
+        await fetchTasksForPIC(true);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
