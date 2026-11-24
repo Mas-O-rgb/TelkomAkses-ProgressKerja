@@ -70,8 +70,6 @@ interface ProgressTableProps {
 
 // Daftar pilihan persentase progres yang tersedia saat edit/update baris
 const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-// Jumlah maksimal baris data yang ditampilkan per halaman tabel
-const ITEMS_PER_PAGE = 25;
 // Pemisah antar entri dalam riwayat keterangan
 const HISTORY_DIVIDER = '────────────────';
 // Pemisah antar versi file dalam riwayat dokumen
@@ -222,7 +220,7 @@ export default function ProgressTable({
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
 // State jumlah baris per halaman (default 25 sesuai pengaturan tabel sebelumnya)
-  const [itemsPerPage, setItemsPerPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   // State nomor halaman paginasi aktif
   const [currentPage, setCurrentPage] = useState(1);
   // State nilai teks pada kotak input "Ke hal"
@@ -1118,9 +1116,9 @@ export default function ProgressTable({
             aria-label="Jumlah data per halaman"
             className="px-3 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-[#ED1E28] cursor-pointer"
           >
-            <option value={10}>10 / hal</option>
             <option value={25}>25 / hal</option>
             <option value={50}>50 / hal</option>
+            <option value={75}>75 / hal</option>
             <option value={100}>100 / hal</option>
           </select>
 
