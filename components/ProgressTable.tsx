@@ -71,7 +71,7 @@ interface ProgressTableProps {
 // Daftar pilihan persentase progres yang tersedia saat edit/update baris
 const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 // Jumlah maksimal baris data yang ditampilkan per halaman tabel
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 25;
 // Pemisah antar entri dalam riwayat keterangan
 const HISTORY_DIVIDER = '────────────────';
 // Pemisah antar versi file dalam riwayat dokumen
