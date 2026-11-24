@@ -1,9 +1,9 @@
 // Menandai file ini sebagai Client Component di Next.js App Router
 'use client';
 
-// Mengimpor hook dan komponen Suspense dari React
+// Mengimpor hook React dan Suspense untuk state, efek samping, callback, serta fallback render
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
-// Mengimpor hook navigasi halaman dari Next.js
+// Mengimpor hook navigasi halaman dari Next.js App Router
 import { useRouter } from 'next/navigation';
 // Mengimpor komponen grafik monitoring progress
 import ProgressCharts from '@/components/ProgressCharts';
@@ -19,6 +19,16 @@ import { supabase } from '@/lib/supabaseClient';
 import Header from '@/components/Header';
 // Mengimpor komponen footer halaman
 import Footer from '@/components/Footer';
+
+// Struktur data baris profil dari tabel profiles di Supabase
+interface ProfileRow {
+  // ID unik akun
+  id: string;
+  // Peran akun ('admin' atau 'pic')
+  role: string;
+  // Nama PIC yang tampil di dropdown dan grafik
+  nama_pic: string | null;
+}
 
 // Mendefinisikan struktur kolom baris data dari tabel Supabase progress_targets
 interface ProgressTargetRow {
@@ -50,6 +60,8 @@ const ADMIN_UPLOADER_NAME = 'Hendra Hadiyatna Djatnika';
 const STORAGE_BUCKET_NAME = 'dokumen-progress';
 // Nama tabel utama di database Supabase
 const TARGET_TABLE_NAME = 'progress_targets';
+// Nama tabel profil akun/PIC di database Supabase
+const PROFILES_TABLE_NAME = 'profiles';
 
 // Nilai awal state form tambah/edit target
 const INITIAL_FORM_STATE: TargetFormData = {
@@ -161,6 +173,8 @@ function AdminDashboardContent() {
   const [adminName, setAdminName] = useState('Administrator');
   // State teks sapaan waktu dinamis
   const [greeting, setGreeting] = useState('Selamat Datang');
+  // Menyimpan daftar nama PIC dinamis dari tabel profiles di Supabase
+  const [picOptions, setPicOptions] = useState<string[]>([]);
   // Instance router untuk navigasi atau redirect
   const router = useRouter();
 
@@ -186,6 +200,43 @@ function AdminDashboardContent() {
     if (!silent) {
       setLoading(false);
     }
+  }, []);
+
+  // Mengambil daftar nama PIC dari tabel profiles di Supabase agar PIC baru otomatis muncul
+  const fetchPicOptions = useCallback(async () => {
+    // Mengambil kolom id, role, dan nama_pic khusus untuk akun role 'pic'
+    const { data, error } = await supabase
+      .from(PROFILES_TABLE_NAME)
+      .select('id, role, nama_pic')
+      .eq('role', 'pic')
+      .order('nama_pic', { ascending: true });
+
+    // Menghentikan proses jika terjadi error saat mengambil data dari Supabase
+    if (error) {
+      console.error('Gagal mengambil daftar PIC:', error.message);
+      return;
+    }
+
+    // Menyaring nama_pic yang terisi dan menghapus duplikat nama
+    const names = Array.from(
+      new Set(
+        ((data as ProfileRow[] | null) || [])
+          .map((item) => item.nama_pic?.trim() || '')
+          .filter((name) => name.length > 0)
+      )
+    );
+
+    // Menyimpan daftar nama PIC terbaru ke state
+    setPicOptions(names);
+
+    // Mengisi otomatis pilihan pic pada form jika masih kosong
+    setFormData((prev) => {
+      if (prev.pic) return prev;
+      return {
+        ...prev,
+        pic: names[0] || DAFTAR_PIC[0] || '',
+      };
+    });
   }, []);
 
   // Memuat nama admin dari sessionStorage dan menyinkronkan sapaan waktu tiap 1 menit
@@ -220,8 +271,9 @@ function AdminDashboardContent() {
       return;
     }
 
-    // Memuat data awal target
+    // Memuat data awal target dan daftar PIC dari Supabase
     fetchTasks();
+    fetchPicOptions();
 
     // Membuat channel Realtime untuk memantau perubahan pada tabel progress_targets
     const channel = supabase
@@ -281,13 +333,17 @@ function AdminDashboardContent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [router, fetchTasks]);
+  }, [router, fetchTasks, fetchPicOptions]);
 
-  // Mengembalikan form ke kondisi kosong dan keluar dari mode edit target tertentu
+  // Mengembalikan form ke kondisi awal dengan PIC default dari daftar terbaru
   const resetForm = useCallback(() => {
     setCurrentTask(null);
-    setFormData(INITIAL_FORM_STATE);
-  }, []);
+    setFormData({
+      ...INITIAL_FORM_STATE,
+      // Menggunakan PIC pertama dari database jika tersedia
+      pic: picOptions[0] || DAFTAR_PIC[0] || '',
+    });
+  }, [picOptions]);
 
   // Mengunggah file ke Supabase Storage lalu mengembalikan URL publiknya
   const uploadDocumentToStorage = async (file: File, prefix?: string): Promise<string | null> => {
@@ -581,6 +637,7 @@ function AdminDashboardContent() {
           onReset={resetForm}
           loading={isSubmitting}
           isAdmin={true}
+          picOptions={picOptions}
         />
 
         {/* Menampilkan indikator loading atau tabel daftar target */}

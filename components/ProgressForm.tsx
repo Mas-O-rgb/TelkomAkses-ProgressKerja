@@ -24,6 +24,7 @@ interface ProgressFormProps {
   onReset: () => void;
   loading: boolean;
   isAdmin?: boolean;
+  picOptions?: string[];
 }
 
 // Pilihan persentase progress kelipatan 10%
@@ -44,7 +45,12 @@ export default function ProgressForm({
   onReset,
   loading,
   isAdmin = true,
+  picOptions,
 }: ProgressFormProps) {
+  // Menggunakan daftar PIC dari Supabase jika tersedia; jika belum ada, pakai DAFTAR_PIC bawaan
+  const daftarPicTersedia =
+    picOptions && picOptions.length > 0 ? picOptions : DAFTAR_PIC;
+
   // Sembunyikan form jika bukan mode Admin
   if (!isAdmin) return null;
 
@@ -143,7 +149,8 @@ export default function ProgressForm({
               onChange={(e) => setFormData({ ...formData, pic: e.target.value })}
               className={FIELD_INPUT_CLASS}
             >
-              {DAFTAR_PIC.map((picName) => (
+              {/* Memakai daftarPicTersedia agar PIC baru dari Supabase otomatis muncul */}
+              {daftarPicTersedia.map((picName) => (
                 <option key={picName} value={picName}>
                   {picName}
                 </option>

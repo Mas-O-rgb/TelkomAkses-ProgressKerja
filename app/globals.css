@@ -1,17 +1,27 @@
+/* Impor Tailwind CSS v4 */
 @import "tailwindcss";
 
+/* Mendefinisikan token warna kustom brand Telkom Akses */
 @theme {
+  /* Warna merah utama Telkom Akses */
   --color-telkom-red: #ED1E28;
+  /* Warna merah tua untuk hover/aksen sekunder */
   --color-telkom-darkred: #C91720;
+  /* Warna gelap netral untuk teks/elemen kontras */
   --color-telkom-dark: #1E293B;
+  /* Warna abu-abu terang untuk latar permukaan */
   --color-telkom-gray: #F8FAFC;
 }
 
+/* Nilai default tema terang pada root dokumen */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Latar belakang utama terang */
+  --background: #F8FAFC;
+  /* Warna teks utama gelap agar kontras tinggi */
+  --foreground: #0F172A;
 }
 
+/* Menghubungkan variabel CSS ke sistem tema Tailwind */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -19,15 +29,15 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Gaya dasar body halaman dengan tema terang */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Pola titik halus sebagai lapisan background dekoratif tema terang */
+.bg-light-pattern {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.28) 1px, transparent 1px);
+  background-size: 22px 22px;
 }
