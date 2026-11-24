@@ -157,6 +157,8 @@ const appendDocumentHistory = (
 function AdminDashboardContent() {
   // State daftar seluruh target yang tampil di grafik dan tabel
   const [tasks, setTasks] = useState<Task[]>([]);
+  // State buka/tutup modal pop-up tambah/edit target
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   // State target yang sedang dipilih untuk diedit dari form atas (null jika mode tambah baru)
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   // State filter kategori pada tabel
@@ -639,6 +641,9 @@ function AdminDashboardContent() {
           loading={isSubmitting}
           isAdmin={true}
           picOptions={picOptions}
+          isOpen={isAddModalOpen}
+          setIsOpen={setIsAddModalOpen}
+          showHeaderBar={false}
         />
 
         {/* Menampilkan indikator loading atau tabel daftar target */}
@@ -654,6 +659,7 @@ function AdminDashboardContent() {
             onUpdateTask={handleUpdateTask}
             onDelete={handleDelete}
             onMarkAsRead={handleMarkAsRead}
+            onOpenAddModal={() => setIsAddModalOpen(true)}
           />
         )}
       </main>

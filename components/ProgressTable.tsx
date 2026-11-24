@@ -4,7 +4,18 @@
 // Mengimpor hook React untuk state dan efek samping
 import React, { useState, useEffect } from 'react';
 // Mengimpor ikon-ikon UI dari lucide-react
-import { Save, X, FileText, Loader2, ChevronLeft, ChevronRight, Send, Download, Archive } from 'lucide-react';
+import {
+  Save,
+  X,
+  FileText,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+  Download,
+  Archive,
+  Plus,
+} from 'lucide-react';
 // Mengimpor daftar PIC dan helper penentuan info status terpusat
 import { DAFTAR_PIC, getStatusInfo } from '@/utils/helpers';
 // Mengimpor library JSZip untuk mengompres beberapa file menjadi arsip .zip
@@ -66,6 +77,8 @@ interface ProgressTableProps {
   isPicView?: boolean;
   // Callback untuk menandai riwayat keterangan sebagai sudah dibaca di database
   onMarkAsRead?: (taskId: number, cleanedKeterangan: string) => Promise<void> | void;
+  // Callback untuk membuka modal pop-up tambah target baru (khusus admin)
+  onOpenAddModal?: () => void;
 }
 
 // Daftar pilihan persentase progres yang tersedia saat edit/update baris
@@ -198,7 +211,7 @@ const parseDocumentHistory = (dokumenString: string): PreviewDocumentItem[] =>
 
 /**
  * Komponen tabel utama monitoring progress target dengan fitur:
- * - Filter kategori & pencarian kata kunci
+ * - Filter kategori, pencarian kata kunci, & tombol tambah target (Admin)
  * - Edit/update inline per baris (termasuk unggah file & catatan baru)
  * - Modal riwayat keterangan + balas pesan + indikator belum dibaca (BARU)
  * - Modal pratinjau multi-dokumen + unduh per file atau unduh semua dalam format ZIP
@@ -213,13 +226,14 @@ export default function ProgressTable({
   onDelete,
   isPicView = false,
   onMarkAsRead,
+  onOpenAddModal,
 }: ProgressTableProps) {
   // State ID baris yang sedang dalam mode edit/update (null jika tidak ada)
   const [editingId, setEditingId] = useState<number | null>(null);
   // State ID baris yang sedang memproses aksi simpan/hapus
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
-// State jumlah baris per halaman (default 25 sesuai pengaturan tabel sebelumnya)
+  // State jumlah baris per halaman (default 25 sesuai pengaturan tabel sebelumnya)
   const [itemsPerPage, setItemsPerPage] = useState(25);
   // State nomor halaman paginasi aktif
   const [currentPage, setCurrentPage] = useState(1);
@@ -421,7 +435,7 @@ export default function ProgressTable({
   // Mengambil potongan data yang ditampilkan di halaman aktif
   const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
 
-// Memastikan nomor halaman aktif selalu berada dalam rentang 1..totalPages
+  // Memastikan nomor halaman aktif selalu berada dalam rentang 1..totalPages
   useEffect(() => {
     setCurrentPage((prev) => Math.min(Math.max(prev, 1), totalPages));
   }, [totalPages]);
@@ -676,7 +690,7 @@ export default function ProgressTable({
   // Merender keseluruhan komponen tabel dan modal terkait
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-[11px]">
-      {/* Toolbar filter kategori dan kolom pencarian */}
+      {/* Toolbar filter kategori, kolom pencarian, dan tombol tambah target */}
       <div className="p-3 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 bg-slate-50/50">
         {/* Dropdown filter berdasarkan kategori */}
         <select
@@ -692,14 +706,27 @@ export default function ProgressTable({
           ))}
         </select>
 
-        {/* Input pencarian berdasarkan nama target, PIC, atau keterangan */}
-        <input
-          type="text"
-          placeholder="Cari target atau PIC..."
-          value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full sm:w-60 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
-        />
+        {/* Sisi kanan: Input pencarian + Tombol Tambah Target */}
+        <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <input
+            type="text"
+            placeholder="Cari target atau PIC..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full sm:w-60 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ED1E28]/30"
+          />
+
+          {!isPicView && onOpenAddModal && (
+            <button
+              type="button"
+              onClick={onOpenAddModal}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#ED1E28] hover:bg-[#d41922] text-white rounded-lg font-bold text-[11px] shadow-2xs transition-all cursor-pointer shrink-0"
+            >
+              <Plus size={13} />
+              <span>Tambah Target</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pembungkus tabel agar responsif secara horizontal di layar kecil */}
@@ -733,7 +760,9 @@ export default function ProgressTable({
                 // Mengambil completedAt aktif hanya jika progres bernilai 100%
                 const activeCompletedAt =
                   activeProgress === 100
-                    ? (isEditing ? editForm.completedAt : task.completedAt)
+                    ? isEditing
+                      ? editForm.completedAt
+                      : task.completedAt
                     : null;
 
                 // Menghitung teks dan gaya badge status berdasarkan tenggat, progres, dan completedAt
@@ -820,7 +849,9 @@ export default function ProgressTable({
                         <input
                           type="date"
                           value={editForm.tenggatWaktu}
-                          onChange={(e) => setEditForm({ ...editForm, tenggatWaktu: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, tenggatWaktu: e.target.value })
+                          }
                           className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[10px]"
                         />
                       ) : (
@@ -939,7 +970,7 @@ export default function ProgressTable({
                           onChange={(e) =>
                             setEditForm({ ...editForm, fileDokumen: e.target.files?.[0] || null })
                           }
-                          className="w-28 text-[9px] text-slate-600 file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:bg-slate-200 file:text-slate-600 file:cursor-pointer hover:file:bg-slate-400 hover:file:text-slate-900 file:transition-all file:transition-colors cursor-pointer"
+                          className="w-28 text-[9px] text-slate-600 file:mr-1 file:py-0.5 file:px-1 file:rounded file:border-0 file:bg-slate-200 file:text-slate-600 file:cursor-pointer hover:file:bg-slate-400 hover:file:text-slate-900 file:transition-colors cursor-pointer"
                         />
                       ) : hasDocumentLink(task.dokumen) ? (
                         <button
@@ -1051,8 +1082,7 @@ export default function ProgressTable({
           dari <span className="font-semibold">{filteredTasks.length}</span> data target
         </div>
 
-        {/* Kontrol paginasi */}
-        {/* Bar paginasi kapsul ala referensi: < 1 2 3 > | 25 / hal | Ke hal [ ] */}
+        {/* Bar paginasi kapsul: < 1 2 3 > | 25 / hal | Ke hal [ ] */}
         <div className="flex flex-wrap items-center justify-center gap-2.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-2xs">
           {/* Navigasi nomor halaman */}
           <div className="flex items-center gap-1">
