@@ -626,6 +626,7 @@ function AdminDashboardContent() {
           barDataPic={countByField('pic')}
           stackedDataPicStatus={stackedDataPicStatus}
           tasks={tasks}
+          loading={loading}
         />
 
         {/* Bagian form tambah atau edit target oleh admin */}

@@ -71,7 +71,7 @@ interface ProgressTableProps {
 // Daftar pilihan persentase progres yang tersedia saat edit/update baris
 const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 // Jumlah maksimal baris data yang ditampilkan per halaman tabel
-const ITEMS_PER_PAGE = 25;
+const ITEMS_PER_PAGE = 5;
 // Pemisah antar entri dalam riwayat keterangan
 const HISTORY_DIVIDER = '────────────────';
 // Pemisah antar versi file dalam riwayat dokumen
@@ -220,8 +220,13 @@ export default function ProgressTable({
   const [editingId, setEditingId] = useState<number | null>(null);
   // State ID baris yang sedang memproses aksi simpan/hapus
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+// State jumlah baris per halaman (default 25 sesuai pengaturan tabel sebelumnya)
+  const [itemsPerPage, setItemsPerPage] = useState(1);
   // State nomor halaman paginasi aktif
   const [currentPage, setCurrentPage] = useState(1);
+  // State nilai teks pada kotak input "Ke hal"
+  const [pageInput, setPageInput] = useState('1');
 
   // State data task yang sedang dibuka pada modal riwayat keterangan
   const [activeHistoryTask, setActiveHistoryTask] = useState<Task | null>(null);
@@ -409,19 +414,58 @@ export default function ProgressTable({
     return matchKategori && matchSearch;
   });
 
-  // Menghitung total halaman berdasarkan jumlah data terfilter
-  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / ITEMS_PER_PAGE));
+  // Menghitung total halaman berdasarkan jumlah data terfilter dan jumlah baris per halaman
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / itemsPerPage));
   // Menghitung indeks akhir data pada halaman aktif
-  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfLastItem = currentPage * itemsPerPage;
   // Menghitung indeks awal data pada halaman aktif
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   // Mengambil potongan data yang ditampilkan di halaman aktif
   const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Memastikan nomor halaman aktif selalu berada dalam rentang 1..totalPages
+// Memastikan nomor halaman aktif selalu berada dalam rentang 1..totalPages
   useEffect(() => {
     setCurrentPage((prev) => Math.min(Math.max(prev, 1), totalPages));
   }, [totalPages]);
+
+  // Menyamakan isi kotak input halaman dengan halaman aktif saat ini
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  // Memvalidasi dan mengarahkan tabel ke nomor halaman yang diketik pengguna
+  const commitPageInput = () => {
+    const parsedPage = parseInt(pageInput, 10);
+
+    if (Number.isNaN(parsedPage)) {
+      setPageInput(String(currentPage));
+      return;
+    }
+
+    const validPage = Math.min(Math.max(parsedPage, 1), totalPages);
+    setCurrentPage(validPage);
+    setPageInput(String(validPage));
+  };
+
+  // Menyusun deretan nomor halaman + ellipsis agar bar tetap rapi saat halaman banyak
+  const getPageNumbers = (): (number | 'ellipsis-left' | 'ellipsis-right')[] => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | 'ellipsis-left' | 'ellipsis-right')[] = [1];
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+
+    if (start > 2) pages.push('ellipsis-left');
+    for (let p = start; p <= end; p += 1) {
+      pages.push(p);
+    }
+    if (end < totalPages - 1) pages.push('ellipsis-right');
+    pages.push(totalPages);
+
+    return pages;
+  };
 
   // Menangani perubahan dropdown filter kategori dan mereset ke halaman 1
   const handleFilterChange = (categoryValue: string) => {
@@ -1010,28 +1054,102 @@ export default function ProgressTable({
         </div>
 
         {/* Kontrol paginasi */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
-          >
-            <ChevronLeft size={13} /> Sebelumnya
-          </button>
+        {/* Bar paginasi kapsul ala referensi: < 1 2 3 > | 25 / hal | Ke hal [ ] */}
+        <div className="flex flex-wrap items-center justify-center gap-2.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-2xs">
+          {/* Navigasi nomor halaman */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              aria-label="Halaman sebelumnya"
+              className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </button>
 
-          <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800">
-            Halaman {currentPage} dari {totalPages}
-          </span>
+            {getPageNumbers().map((item) => {
+              if (item === 'ellipsis-left' || item === 'ellipsis-right') {
+                return (
+                  <span
+                    key={item}
+                    className="w-6 h-7 inline-flex items-center justify-center text-slate-400 select-none"
+                  >
+                    …
+                  </span>
+                );
+              }
 
-          <button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-300 rounded-lg font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+              const isActive = item === currentPage;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCurrentPage(item)}
+                  className={`min-w-7 h-7 px-1.5 inline-flex items-center justify-center rounded-full text-[11px] transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-red-50 text-[#ED1E28] font-bold border border-[#ED1E28]/50'
+                      : 'text-slate-600 font-medium hover:bg-slate-100 border border-transparent'
+                  }`}
+                >
+                  {item}
+                </button>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              aria-label="Halaman berikutnya"
+              className="w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+
+          {/* Pemilih jumlah baris per halaman */}
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            aria-label="Jumlah data per halaman"
+            className="px-3 py-1 rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-[#ED1E28] cursor-pointer"
           >
-            Berikutnya <ChevronRight size={13} />
-          </button>
+            <option value={10}>10 / hal</option>
+            <option value={25}>25 / hal</option>
+            <option value={50}>50 / hal</option>
+            <option value={100}>100 / hal</option>
+          </select>
+
+          {/* Input lompat ke nomor halaman tertentu */}
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
+            <span className="font-medium whitespace-nowrap">Ke hal</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              disabled={totalPages <= 1}
+              value={pageInput}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setPageInput(e.target.value)}
+              onBlur={commitPageInput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitPageInput();
+                  e.currentTarget.blur();
+                } else if (e.key === 'Escape') {
+                  setPageInput(String(currentPage));
+                  e.currentTarget.blur();
+                }
+              }}
+              aria-label="Nomor halaman tujuan"
+              className="w-12 h-7 px-2 text-center rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-800 focus:outline-none focus:border-[#ED1E28] disabled:bg-slate-50 disabled:text-slate-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
         </div>
       </div>
 
