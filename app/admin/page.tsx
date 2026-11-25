@@ -29,7 +29,7 @@ interface ProfileRow {
   // Peran akun ('admin' atau 'pic')
   role: string;
   // Nama PIC yang tampil di dropdown dan grafik
-  nama_pic: string | null;
+  nama_user: string | null;
 }
 
 // Struktur data baris target dari tabel `progress_targets` di Supabase
@@ -181,9 +181,9 @@ function AdminDashboardContent() {
   const fetchPicOptions = useCallback(async () => {
     const { data, error } = await supabase
       .from(PROFILES_TABLE_NAME)
-      .select('id, role, nama_pic')
+      .select('id, role, nama_user')
       .eq('role', 'pic')
-      .order('nama_pic', { ascending: true });
+      .order('nama_user', { ascending: true });
 
     if (error) {
       console.error('Gagal mengambil daftar PIC:', error.message);
@@ -193,7 +193,7 @@ function AdminDashboardContent() {
     const names = Array.from(
       new Set(
         ((data as ProfileRow[] | null) || [])
-          .map((item) => item.nama_pic?.trim() || '')
+          .map((item) => item.nama_user?.trim() || '')
           .filter((name) => name.length > 0)
       )
     );

@@ -29,7 +29,7 @@ interface Profile {
   // Peran akses ('admin' atau 'pic')
   role: string;
   // Nama lengkap PIC atau admin
-  nama_pic: string | null;
+  nama_user: string | null;
 }
 
 // Daftar poin keunggulan yang ditampilkan di sisi kiri halaman portal
@@ -142,10 +142,10 @@ export default function LoginPage() {
     router.push('/pic');
   };
 
-  // Menyaring akun admin yang memiliki nama_pic valid
-  const adminProfiles = profiles.filter((profile) => profile.role === 'admin' && profile.nama_pic);
-  // Menyaring akun PIC yang memiliki nama_pic valid
-  const picProfiles = profiles.filter((profile) => profile.role === 'pic' && profile.nama_pic);
+  // Menyaring akun admin yang memiliki nama_user valid
+  const adminProfiles = profiles.filter((profile) => profile.role === 'admin' && profile.nama_user);
+  // Menyaring akun PIC yang memiliki nama_user valid
+  const picProfiles = profiles.filter((profile) => profile.role === 'pic' && profile.nama_user);
 
   // Menghitung jumlah kartu PIC penuh pada baris kelipatan 3
   const fullRowPicCount = Math.floor(picProfiles.length / 3) * 3;
@@ -244,7 +244,7 @@ export default function LoginPage() {
                   <button
                     key={admin.id}
                     type="button"
-                    onClick={() => handleLoginSpecificAdmin(admin.nama_pic!)}
+                    onClick={() => handleLoginSpecificAdmin(admin.nama_user!)}
                     className="group w-full bg-rose-50/80 border-[1.5px] border-[#ED1E28] rounded-2xl px-5 py-4 flex items-center justify-between gap-4 text-left cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:bg-rose-50 transition-all duration-200 ease-out"
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -259,7 +259,7 @@ export default function LoginPage() {
                       {/* Nama lengkap admin dan label peran */}
                       <div className="min-w-0">
                         <div className="text-sm sm:text-base font-bold text-slate-800 truncate">
-                          {admin.nama_pic}
+                          {admin.nama_user}
                         </div>
                         <div className="text-xs text-slate-500 mt-0.5">Admin Dashboard</div>
                       </div>
@@ -279,14 +279,14 @@ export default function LoginPage() {
                       <button
                         key={profile.id}
                         type="button"
-                        onClick={() => handleLoginPIC(profile.nama_pic!)}
+                        onClick={() => handleLoginPIC(profile.nama_user!)}
                         className="group bg-white border border-slate-200/90 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:border-[#ED1E28] hover:bg-rose-50/30 transition-all duration-200 ease-out"
                       >
                         <div className="w-11 h-11 rounded-full bg-slate-200/80 text-slate-600 group-hover:bg-[#ED1E28] group-hover:text-white flex items-center justify-center mb-2.5 transition-colors">
                           <UserCheck size={20} />
                         </div>
                         <span className="text-xs sm:text-[13px] font-bold text-slate-800 line-clamp-2 leading-snug">
-                          {profile.nama_pic}
+                          {profile.nama_user}
                         </span>
                         <span className="text-[11px] text-slate-500 mt-0.5">PIC Dashboard</span>
                       </button>
@@ -301,7 +301,7 @@ export default function LoginPage() {
                       <button
                         key={profile.id}
                         type="button"
-                        onClick={() => handleLoginPIC(profile.nama_pic!)}
+                        onClick={() => handleLoginPIC(profile.nama_user!)}
                         className="group flex-1 bg-white border border-slate-200/90 rounded-2xl px-5 py-3.5 flex items-center justify-center gap-3.5 text-left cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:border-[#ED1E28] hover:bg-rose-50/30 transition-all duration-200 ease-out"
                       >
                         <div className="w-11 h-11 rounded-full bg-slate-200/80 text-slate-600 group-hover:bg-[#ED1E28] group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
@@ -309,7 +309,7 @@ export default function LoginPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-                            {profile.nama_pic}
+                            {profile.nama_user}
                           </div>
                           <div className="text-[11px] text-slate-500">PIC Dashboard</div>
                         </div>
