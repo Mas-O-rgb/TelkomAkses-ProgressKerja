@@ -21,6 +21,8 @@ import JSZip from 'jszip';
 // Mengimpor daftar PIC bawaan dan helper penentuan gaya badge status
 import { DAFTAR_PIC, getStatusInfo } from '@/utils/helpers';
 
+import { getCategoryTheme } from '@/utils/helpers';
+
 // ==================== TIPE DATA & KONSTANTA ====================
 
 // Mendefinisikan struktur data objek Task yang digunakan di tabel dan modal
@@ -81,8 +83,6 @@ interface ProgressTableProps {
   onMarkAsRead?: (taskId: number, cleanedKeterangan: string) => Promise<void> | void;
   // Callback untuk membuka modal pop-up tambah target baru (khusus admin)
   onOpenAddModal?: () => void;
-  // Urutan nama kategori yang sama dengan donut chart kategori (opsional)
-  categoryOrder?: string[];
 }
 
 // Gaya badge kategori yang diurutkan sama persis dengan KATEGORI_COLORS di ProgressCharts
@@ -215,7 +215,6 @@ export default function ProgressTable({
   isPicView = false,
   onMarkAsRead,
   onOpenAddModal,
-  categoryOrder,
 }: ProgressTableProps) {
   // --- STATE MODE EDIT & LOADING BARIS ---
 
@@ -261,9 +260,6 @@ export default function ProgressTable({
 
   // Mengambil daftar kategori unik dari data tasks untuk dropdown filter & fallback urutan warna
   const uniqueCategories = Array.from(new Set(tasks.map((task) => task.kategori).filter(Boolean)));
-  // Menggunakan urutan kategori dari donut chart jika tersedia, atau fallback ke kategori unik pada tabel
-  const activeCategoryOrder =
-    categoryOrder && categoryOrder.length > 0 ? categoryOrder : uniqueCategories;
 
   // Tag unread yang dicek untuk peran aktif (PIC atau Admin)
   const activeUnreadTag = isPicView ? '[UNREAD_BY_PIC]' : '[UNREAD_BY_ADMIN]';
@@ -751,11 +747,9 @@ export default function ProgressTable({
                           className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[11px]"
                         />
                       ) : (
-                        <span
-                          className={`px-1.5 py-0.5 rounded border inline-block ${getKategoriBadgeClass(
-                            task.kategori,
-                            activeCategoryOrder
-                          )}`}
+                        <span className={`px-1.5 py-0.5 rounded border inline-block ${
+                            getCategoryTheme(task.kategori).badgeClass
+                          }`}
                         >
                           {task.kategori}
                         </span>

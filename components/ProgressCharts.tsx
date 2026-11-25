@@ -19,6 +19,8 @@ import {
   YAxis,
 } from 'recharts';
 
+import { getCategoryTheme } from '@/utils/helpers';
+
 // ==================== TIPE DATA & KONSTANTA ====================
 
 // Mendefinisikan struktur item data untuk donut chart status dan kategori
@@ -80,17 +82,6 @@ const STATUS_COLORS: Record<string, string> = {
   OVERDUE: '#ED1E28',
   'SUDAH SELESAI': '#10B981',
 };
-
-// Palet warna kategori target (selaras dengan urutan badge kategori di ProgressTable)
-const KATEGORI_COLORS = [
-  '#64748b',
-  '#ef4444',
-  '#10b981',
-  '#3b82f6',
-  '#f59e0b',
-  '#8b5cf6',
-  '#06b6d4',
-];
 
 // Gaya standar tooltip agar tampilan konsisten di seluruh grafik
 const TOOLTIP_STYLE = {
@@ -321,10 +312,10 @@ export default function ProgressCharts({
                     paddingAngle={3}
                     stroke="none"
                   >
-                    {pieDataKategori.map((_, idx) => (
+                    {pieDataKategori.map((entry, idx) => (
                       <Cell
-                        key={`kategori-cell-${idx}`}
-                        fill={KATEGORI_COLORS[idx % KATEGORI_COLORS.length]}
+                        key={`kategori-cell-${entry.name || idx}`}
+                        fill={getCategoryTheme(entry.name).hex}
                       />
                     ))}
                   </Pie>
@@ -339,7 +330,7 @@ export default function ProgressCharts({
                 <p className="text-[11px] text-slate-400">Belum ada data kategori.</p>
               ) : (
                 pieDataKategori.map((item, idx) => {
-                  const color = KATEGORI_COLORS[idx % KATEGORI_COLORS.length];
+                  const color = getCategoryTheme(item.name).hex;
                   const count = item.value || 0;
                   const percentage =
                     totalKategori > 0 ? Math.round((count / totalKategori) * 100) : 0;

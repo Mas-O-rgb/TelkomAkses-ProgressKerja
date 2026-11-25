@@ -574,7 +574,6 @@ function AdminDashboardContent() {
             onDelete={handleDelete}
             onMarkAsRead={handleMarkAsRead}
             onOpenAddModal={() => setIsAddModalOpen(true)}
-            categoryOrder={kategoriChartData.map((item) => item.name)}
           />
         )}
       </main>
