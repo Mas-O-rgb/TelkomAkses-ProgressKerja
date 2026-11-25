@@ -2,21 +2,23 @@
 'use client';
 
 // Mengimpor hook React dan Suspense untuk state, efek samping, callback, serta fallback render
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
-// Mengimpor hook parameter rute dinamis dan navigasi dari Next.js App Router
-import { useParams, useRouter } from 'next/navigation';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
+// Mengimpor hook navigasi halaman dari Next.js App Router
+import { useRouter } from 'next/navigation';
+// Mengimpor komponen footer halaman
+import Footer from '@/components/Footer';
+// Mengimpor komponen header halaman
+import Header from '@/components/Header';
 // Mengimpor komponen tabel progress beserta tipe data Task
 import ProgressTable, { Task } from '@/components/ProgressTable';
 // Mengimpor instance client Supabase untuk query database dan penyimpanan file
 import { supabase } from '@/lib/supabaseClient';
-// Mengimpor komponen header halaman
-import Header from '@/components/Header';
-// Mengimpor komponen footer halaman
-import Footer from '@/components/Footer';
-// Mengimpor helper perhitungan status dan penyelesaian tanggal terpusat
+// Mengimpor helper perhitungan status dan tanggal selesai terpusat
 import { calculateTaskStatus, resolveCompletedAt } from '@/utils/helpers';
 
-// Mendefinisikan struktur kolom baris data dari tabel Supabase progress_targets
+// ==================== TIPE DATA & KONSTANTA ====================
+
+// Mendefinisikan struktur kolom baris data dari tabel `progress_targets` di Supabase
 interface ProgressTargetRow {
   // ID unik target
   id: number;
@@ -45,164 +47,145 @@ const STORAGE_BUCKET_NAME = 'dokumen-progress';
 // Nama tabel utama target progres di database Supabase
 const TARGET_TABLE_NAME = 'progress_targets';
 
+// ==================== HELPER MURNI ====================
+
 // Mengubah baris data Supabase (snake_case) menjadi objek Task (camelCase)
 const mapRowToTask = (row: ProgressTargetRow): Task => ({
-  // Memetakan id
   id: row.id,
-  // Memetakan kategori
   kategori: row.kategori,
-  // Memetakan nama_target ke namaTarget
   namaTarget: row.nama_target,
-  // Memetakan waktu_mulai ke waktuMulai
   waktuMulai: row.waktu_mulai,
-  // Memetakan tenggat_waktu ke tenggatWaktu
   tenggatWaktu: row.tenggat_waktu,
-  // Memetakan progress
   progress: row.progress,
-  // Memetakan pic
   pic: row.pic,
-  // Memetakan keterangan dengan fallback string kosong
   keterangan: row.keterangan || '',
-  // Memetakan dokumen dengan fallback null jika belum ada
   dokumen: row.dokumen || null,
-  // Memetakan completed_at ke completedAt dengan fallback null
   completedAt: row.completed_at || null,
 });
 
 // Menentukan teks sapaan berdasarkan jam lokal perangkat
 const getTimeGreeting = (hour: number): string => {
-  // Sapaan pagi untuk jam 04:00 - 10:59
   if (hour >= 4 && hour < 11) return 'Selamat Pagi';
-  // Sapaan siang untuk jam 11:00 - 14:59
   if (hour >= 11 && hour < 15) return 'Selamat Siang';
-  // Sapaan sore untuk jam 15:00 - 17:59
   if (hour >= 15 && hour < 18) return 'Selamat Sore';
-  // Sapaan malam untuk jam lainnya
   return 'Selamat Malam';
 };
 
 // Memformat waktu saat ini sesuai format lokal Indonesia (id-ID)
 const formatTimestamp = (): string => {
-  // Mengambil waktu perangkat saat ini
   const now = new Date();
-  // Menggabungkan tanggal lokal dan jam:menit
   return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID', {
-    // Format jam dua digit
     hour: '2-digit',
-    // Format menit dua digit
     minute: '2-digit',
   })}`;
 };
 
 // Menyisipkan entri dokumen baru di paling depan riwayat dokumen menggunakan pemisah '│'
 const appendDocumentHistory = (
-  // Riwayat dokumen sebelumnya
   existingDokumen: string | null | undefined,
-  // URL publik dokumen baru
   newPublicUrl: string,
-  // Nama pengunggah dokumen (PIC)
   uploaderName: string
 ): string => {
-  // Membentuk format entri baru lengkap dengan timestamp dan nama pengunggah
   const newEntry = `[${formatTimestamp()}] ${uploaderName}::${newPublicUrl}`;
-  // Mengambil riwayat lama jika valid dan bukan placeholder kosong
   const previousDocs =
     existingDokumen && existingDokumen !== '-' && existingDokumen !== 'Upluad File'
       ? existingDokumen
       : '';
 
-  // Menggabungkan entri baru dengan riwayat lama jika tersedia
   return previousDocs ? `${newEntry}│${previousDocs}` : newEntry;
 };
 
-// Komponen utama konten dashboard PIC
-function PicDashboardContent() {
-  // Mengambil parameter dinamis dari URL (/pic/[nama])
-  const params = useParams();
-  // Mengambil instance router untuk navigasi
-  const router = useRouter();
-  // Mendekode nama PIC dari parameter URL
-  const picName = decodeURIComponent((params?.nama as string) || '');
+// ==================== KOMPONEN KONTEN PIC ====================
 
-  // State daftar tugas milik PIC yang sedang dibuka
+// Komponen utama konten dashboard PIC untuk melihat dan memperbarui progres tugas milik sendiri
+function PicDashboardContent() {
+  // Instance router Next.js untuk navigasi atau redirect
+  const router = useRouter();
+
+  // State nama PIC yang sedang login (diambil dari sessionStorage)
+  const [picName, setPicName] = useState<string>('');
+  // State daftar tugas milik PIC yang sedang aktif
   const [tasks, setTasks] = useState<Task[]>([]);
-  // State filter kategori pada tabel
+  // State filter kategori aktif pada tabel ('ALL' untuk semua kategori)
   const [filterKategori, setFilterKategori] = useState('ALL');
   // State kata kunci pencarian pada tabel
   const [searchTerm, setSearchTerm] = useState('');
-  // State status loading saat mengambil data awal
+  // State indikator loading saat mengambil data awal
   const [loading, setLoading] = useState(true);
-  // State ucapan sapaan sesuai waktu
+  // State ucapan sapaan waktu dinamis sesuai jam
   const [greeting, setGreeting] = useState('Selamat Datang');
 
-  // Memperbarui ucapan sapaan waktu secara berkala setiap 1 menit
+  // --- PENGAMBILAN DATA ---
+
+  // Mengambil daftar target khusus milik PIC aktif dari Supabase (silent=true tanpa spinner loading)
+  const fetchTasksForPIC = useCallback(
+    async (silent = false) => {
+      if (!picName) return;
+
+      if (!silent) {
+        setLoading(true);
+      }
+
+      const { data } = await supabase
+        .from(TARGET_TABLE_NAME)
+        .select('*')
+        .eq('pic', picName)
+        .order('id', { ascending: false });
+
+      if (data) {
+        setTasks((data as ProgressTargetRow[]).map(mapRowToTask));
+      }
+
+      if (!silent) {
+        setLoading(false);
+      }
+    },
+    [picName]
+  );
+
+  // --- EFEK SAMPING (SESI, SAPAAN WAKTU & REALTIME) ---
+
+  // Memvalidasi sesi PIC dari sessionStorage dan menyinkronkan sapaan waktu tiap 1 menit
   useEffect(() => {
-    // Fungsi sinkronisasi sapaan berdasarkan jam saat ini
+    const storedRole = sessionStorage.getItem('userRole');
+    const storedName = sessionStorage.getItem('userName')?.trim() || '';
+
+    if (storedRole !== 'pic' || !storedName) {
+      router.push('/');
+      return;
+    }
+
+    setPicName(storedName);
+
     const syncGreeting = () => {
       setGreeting(getTimeGreeting(new Date().getHours()));
     };
 
-    // Menjalankan sinkronisasi sapaan saat komponen dimuat
     syncGreeting();
-    // Menjadwalkan pembaruan sapaan tiap 60.000 ms (1 menit)
     const interval = setInterval(syncGreeting, 60000);
-    // Membersihkan interval saat komponen di-unmount
+
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
 
-  // Mengambil daftar target khusus untuk PIC aktif dari Supabase
-  const fetchTasksForPIC = useCallback(async (silent = false) => {
-    // Menghentikan proses jika nama PIC kosong
-    if (!picName) return;
-
-    // Menampilkan spinner loading hanya jika bukan mode silent
-    if (!silent) {
-      setLoading(true);
-    }
-
-    // Mengambil baris data dengan pic sesuai picName diurutkan dari id terbaru
-    const { data } = await supabase
-      .from(TARGET_TABLE_NAME)
-      .select('*')
-      .eq('pic', picName)
-      .order('id', { ascending: false });
-
-    // Memetakan data hasil query menjadi array Task
-    if (data) {
-      setTasks((data as ProgressTargetRow[]).map(mapRowToTask));
-    }
-
-    // Mematikan spinner loading jika bukan mode silent
-    if (!silent) {
-      setLoading(false);
-    }
-  }, [picName]);
-
-  // Memuat data awal dan mendengarkan perubahan Supabase Realtime khusus milik PIC ini
+  // Memuat data tugas awal dan berlangganan perubahan Realtime Supabase khusus PIC aktif
   useEffect(() => {
-    // Menghentikan proses jika nama PIC belum tersedia
     if (!picName) return;
 
-    // Memuat daftar tugas awal
     fetchTasksForPIC();
 
-    // Membuat channel Realtime untuk memantau perubahan pada tabel progress_targets
     const channel = supabase
       .channel('pic-dashboard-silent-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: TARGET_TABLE_NAME },
         (payload) => {
-          // Mengambil jenis event perubahan (INSERT, UPDATE, DELETE)
           const eventType = payload.eventType;
 
-          // Menambahkan tugas baru ke daftar jika diperuntukkan bagi PIC ini
           if (eventType === 'INSERT') {
             const insertedRow = payload.new as ProgressTargetRow;
             if (insertedRow.pic === picName) {
               setTasks((prev) => [mapRowToTask(insertedRow), ...prev]);
             }
-          // Memperbarui data tugas yang berubah pada state lokal
           } else if (eventType === 'UPDATE') {
             const updatedRow = payload.new as ProgressTargetRow;
             if (updatedRow.pic === picName) {
@@ -210,30 +193,20 @@ function PicDashboardContent() {
                 prev.map((task) =>
                   task.id === updatedRow.id
                     ? {
-                        // Mempertahankan field yang tidak diubah
                         ...task,
-                        // Memperbarui kategori
                         kategori: updatedRow.kategori,
-                        // Memperbarui nama target
                         namaTarget: updatedRow.nama_target,
-                        // Memperbarui waktu mulai
                         waktuMulai: updatedRow.waktu_mulai,
-                        // Memperbarui tenggat waktu
                         tenggatWaktu: updatedRow.tenggat_waktu,
-                        // Memperbarui persentase progres
                         progress: updatedRow.progress,
-                        // Memperbarui keterangan
                         keterangan: updatedRow.keterangan || '',
-                        // Memperbarui dokumen dengan fallback dokumen sebelumnya
                         dokumen: updatedRow.dokumen || task.dokumen,
-                        // Menyinkronkan tanggal selesai dari kolom completed_at
                         completedAt: updatedRow.completed_at ?? null,
                       }
                     : task
                 )
               );
             }
-          // Menghapus tugas dari state jika dihapus di database
           } else if (eventType === 'DELETE') {
             const deletedId = (payload.old as { id: number }).id;
             setTasks((prev) => prev.filter((task) => task.id !== deletedId));
@@ -242,46 +215,39 @@ function PicDashboardContent() {
       )
       .subscribe();
 
-    // Membersihkan langganan channel Realtime saat komponen di-unmount
     return () => {
       supabase.removeChannel(channel);
     };
   }, [picName, fetchTasksForPIC]);
 
-  // Mengunggah dokumen baru oleh PIC ke Supabase Storage dan mengembalikan public URL-nya
+  // --- HANDLER AKSI ---
+
+  // Mengunggah file bukti progres oleh PIC ke Supabase Storage lalu mengembalikan URL publiknya
   const uploadDocumentToStorage = async (file: File): Promise<string | null> => {
-    // Mengambil ekstensi file
     const fileExt = file.name.split('.').pop();
-    // Menyusun nama file unik dengan prefix pic_
     const fileName = `pic_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-    // Mengunggah file ke bucket dokumen-progress
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET_NAME)
       .upload(fileName, file);
 
-    // Menampilkan pesan jika upload gagal
     if (uploadError) {
       alert('Gagal mengunggah dokumen: ' + uploadError.message);
       return null;
     }
 
-    // Mengambil URL publik dari file yang berhasil diunggah
     const { data: publicUrlData } = supabase.storage
       .from(STORAGE_BUCKET_NAME)
       .getPublicUrl(fileName);
 
-    // Mengembalikan URL publik dokumen
     return publicUrlData.publicUrl;
   };
 
-  // Menyimpan pembaruan progres, tanggal selesai, status, keterangan, atau dokumen dari sisi PIC
+  // Menyimpan pembaruan progres, tanggal selesai, status, keterangan, dan dokumen dari sisi PIC
   const handleUpdateTask = async (updatedTask: Task) => {
     try {
-      // Menjaga riwayat dokumen yang sudah ada
       let finalDokumenUrl = updatedTask.dokumen || '-';
 
-      // Jika PIC melampirkan file dokumen baru, unggah lalu tambahkan ke riwayat dokumen
       if (updatedTask.fileDokumen) {
         const uploadedUrl = await uploadDocumentToStorage(updatedTask.fileDokumen);
         if (!uploadedUrl) return;
@@ -292,10 +258,8 @@ function PicDashboardContent() {
         );
       }
 
-      // Menentukan tanggal selesai berdasarkan progres dan completedAt yang sudah ada
       const nextCompletedAt = resolveCompletedAt(updatedTask.progress, updatedTask.completedAt);
 
-      // Memperbarui baris target di Supabase beserta completed_at dan status terhitung
       const { error } = await supabase
         .from(TARGET_TABLE_NAME)
         .update({
@@ -312,45 +276,41 @@ function PicDashboardContent() {
         })
         .eq('id', updatedTask.id);
 
-      // Menampilkan alert jika gagal update, atau memuat ulang data secara silent jika berhasil
       if (error) {
         alert('Gagal memperbarui progress: ' + error.message);
       } else {
         await fetchTasksForPIC(true);
       }
     } catch (err: unknown) {
-      // Menangkap error tak terduga dan menampilkannya ke layar
       const message = err instanceof Error ? err.message : String(err);
       alert('Terjadi kesalahan: ' + message);
     }
   };
 
-  // Menandai catatan/keterangan pada tugas tertentu sebagai sudah dibaca oleh PIC
+  // Menandai riwayat keterangan pada tugas tertentu sebagai sudah dibaca oleh PIC
   const handleMarkAsRead = async (taskId: number, cleanedKeterangan: string) => {
-    // Memperbarui state lokal agar badge belum dibaca langsung hilang
     setTasks((prev) =>
       prev.map((task) => (task.id === taskId ? { ...task, keterangan: cleanedKeterangan } : task))
     );
 
-    // Menyimpan keterangan bersih ke database Supabase
     const { error } = await supabase
       .from(TARGET_TABLE_NAME)
       .update({ keterangan: cleanedKeterangan })
       .eq('id', taskId);
 
-    // Mencatat error di console jika update status baca gagal
     if (error) {
       console.error('Gagal memperbarui status baca:', error.message);
     }
   };
 
-  // Menghapus data sessionStorage dan mengarahkan kembali ke halaman utama/login
+  // Menghapus data sesi dan mengarahkan kembali ke halaman login/pemilihan akun
   const handleLogout = () => {
     sessionStorage.clear();
     router.push('/');
   };
 
-  // Merender tampilan utama dashboard PIC
+  // --- RENDER HALAMAN ---
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
       {/* Header halaman PIC dengan sapaan dan tombol logout */}
@@ -361,9 +321,9 @@ function PicDashboardContent() {
         onLogout={handleLogout}
       />
 
-      {/* Konten utama halaman */}
+      {/* Konten utama halaman PIC */}
       <main className="max-w-[96%] mx-auto px-0 pt-24 pb-12 space-y-8 flex-1 w-full">
-        {/* Menampilkan indikator loading atau tabel progres tugas PIC */}
+        {/* Indikator loading atau tabel daftar target milik PIC */}
         {loading ? (
           <div className="text-center py-8 text-slate-500 text-sm">Memuat data target...</div>
         ) : (
@@ -387,7 +347,7 @@ function PicDashboardContent() {
 }
 
 // Membungkus PicDashboardContent dengan Suspense untuk kompatibilitas Next.js App Router
-export default function PicDynamicDashboard() {
+export default function PicDashboard() {
   return (
     <Suspense
       fallback={

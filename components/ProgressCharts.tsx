@@ -1,45 +1,67 @@
+// Menandai file ini sebagai Client Component di Next.js App Router
 'use client';
 
+// Mengimpor React untuk rendering komponen
 import React from 'react';
+// Mengimpor komponen grafik dari Recharts untuk visualisasi status, kategori, deadline, dan PIC
 import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
+  Area,
+  AreaChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  AreaChart,
-  Area,
 } from 'recharts';
 
+// ==================== TIPE DATA & KONSTANTA ====================
+
+// Mendefinisikan struktur item data untuk donut chart status dan kategori
 interface ChartDataItem {
+  // Label nama status atau kategori
   name: string;
+  // Nilai numerik utama untuk grafik
   value: number;
+  // Jumlah opsional jika data berasal dari agregasi jumlah item
   jumlah?: number;
 }
 
+// Mendefinisikan struktur rekap jumlah tiap status per PIC
 interface StackedPicStatusItem {
+  // Nama PIC
   name: string;
+  // Jumlah target berstatus BELUM DIKERJAKAN
   'BELUM DIKERJAKAN': number;
+  // Jumlah target berstatus ON PROGRESS
   'ON PROGRESS': number;
-  'OVERDUE': number;
+  // Jumlah target berstatus OVERDUE
+  OVERDUE: number;
+  // Jumlah target berstatus SUDAH SELESAI
   'SUDAH SELESAI': number;
 }
 
+// Mendefinisikan struktur minimal data task untuk grafik tren deadline
 interface TaskItem {
+  // Tanggal tenggat waktu target (YYYY-MM-DD)
   tenggatWaktu?: string;
 }
 
+// Mendefinisikan props komponen ProgressCharts
 interface ProgressChartsProps {
+  // Data distribusi jumlah target berdasarkan status
   pieDataStatus: ChartDataItem[];
+  // Data distribusi jumlah target berdasarkan kategori
   pieDataKategori: ChartDataItem[];
-  barDataPic: ChartDataItem[];
+  // Data rekap status pengerjaan per PIC
   stackedDataPicStatus: StackedPicStatusItem[];
+  // Daftar target untuk menghitung tren deadline dan total target
   tasks: TaskItem[];
+  // Status loading saat data awal sedang diambil
   loading?: boolean;
 }
 
@@ -51,15 +73,15 @@ const ORDERED_STATUS_LIST = [
   'SUDAH SELESAI',
 ];
 
-// Pemetaan warna setiap status target
+// Pemetaan warna hex untuk setiap status target
 const STATUS_COLORS: Record<string, string> = {
   'BELUM DIKERJAKAN': '#8E9BAE',
   'ON PROGRESS': '#F59E0B',
-  'OVERDUE': '#ED1E28',
+  OVERDUE: '#ED1E28',
   'SUDAH SELESAI': '#10B981',
 };
 
-// Palet warna kategori target
+// Palet warna kategori target (selaras dengan urutan badge kategori di ProgressTable)
 const KATEGORI_COLORS = [
   '#64748b',
   '#ef4444',
@@ -70,14 +92,16 @@ const KATEGORI_COLORS = [
   '#06b6d4',
 ];
 
-// Gaya standar tooltip agar konsisten di seluruh grafik
+// Gaya standar tooltip agar tampilan konsisten di seluruh grafik
 const TOOLTIP_STYLE = {
   fontSize: '11px',
   borderRadius: '8px',
   border: '1px solid #e2e8f0',
 };
 
-// Komponen skeleton loading untuk baris atas (3 kartu ringkas)
+// ==================== KOMPONEN SKELETON LOADING ====================
+
+// Komponen skeleton loading untuk baris atas (3 kartu ringkas: status, kategori, tren deadline)
 function TopChartsSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -86,12 +110,14 @@ function TopChartsSkeleton() {
           key={cardIdx}
           className="bg-white p-4 rounded-xl border border-white border-b-7 shadow-2xs flex flex-col justify-between animate-pulse"
         >
+          {/* Placeholder judul kartu dan label ringkas di pojok kanan */}
           <div className="flex items-center justify-between mb-3">
             <div className="h-3 w-28 bg-slate-200 rounded" />
             <div className="h-2.5 w-14 bg-slate-100 rounded" />
           </div>
 
           {cardIdx < 2 ? (
+            // Placeholder donut chart + daftar rincian di sisi kanan untuk 2 kartu pertama
             <div className="flex flex-col sm:flex-row items-center gap-4 min-h-[176px] my-auto">
               <div className="w-36 h-36 rounded-full border-[14px] border-slate-100 shrink-0" />
               <div className="flex-1 w-full space-y-2.5">
@@ -107,6 +133,7 @@ function TopChartsSkeleton() {
               </div>
             </div>
           ) : (
+            // Placeholder grafik batang/area untuk kartu ketiga (Tren Deadline)
             <div className="h-44 w-full flex items-end gap-2 pt-6 px-2">
               {[40, 65, 50, 80, 55, 70, 45].map((heightPct, barIdx) => (
                 <div
@@ -123,6 +150,13 @@ function TopChartsSkeleton() {
   );
 }
 
+// ==================== KOMPONEN GRAFIK UTAMA ====================
+
+/**
+ * Komponen visualisasi grafik monitoring progress kerja:
+ * - Baris atas: Distribusi Status, Kategori Target, dan Tren Deadline
+ * - Baris bawah: Status Pengerjaan per PIC
+ */
 export default function ProgressCharts({
   pieDataStatus,
   pieDataKategori,
@@ -130,6 +164,8 @@ export default function ProgressCharts({
   tasks,
   loading = false,
 }: ProgressChartsProps) {
+  // --- AGREGASI DATA GRAFIK ---
+
   // Mengagregasi jumlah target per tanggal tenggat waktu
   const deadlineCounts = tasks.reduce<Record<string, number>>((acc, task) => {
     if (task.tenggatWaktu) {
@@ -146,6 +182,7 @@ export default function ProgressCharts({
       jumlah: deadlineCounts[date],
     }));
 
+  // Menghitung total seluruh target aktif
   const totalTasks = tasks.length;
 
   // Menghitung total nilai kategori untuk persentase rincian Kategori Target
@@ -154,11 +191,13 @@ export default function ProgressCharts({
     0
   );
 
-  // Menampilkan animasi loading saat data awal masih dimuat dan belum ada task
+  // --- TAMPILAN SKELETON SAAT LOADING AWAL ---
+
   if (loading && totalTasks === 0) {
     return (
       <div className="space-y-6">
         <TopChartsSkeleton />
+        {/* Placeholder skeleton untuk grafik bawah (Status Pengerjaan per PIC) */}
         <div className="bg-white p-4 rounded-xl border border-white border-b-7 shadow-2xs animate-pulse">
           <div className="flex items-center justify-between mb-3">
             <div className="h-3 w-36 bg-slate-200 rounded" />
@@ -170,11 +209,13 @@ export default function ProgressCharts({
     );
   }
 
+  // --- RENDER GRAFIK ---
+
   return (
     <div className="space-y-6">
       {/* Baris Atas: 3 Grafik Ringkas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 1. Distribusi Status */}
+        {/* 1. Kartu Distribusi Status */}
         <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
@@ -186,7 +227,7 @@ export default function ProgressCharts({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 min-h-[176px] my-auto">
-            {/* Donut Chart Status */}
+            {/* Donut chart distribusi status */}
             <div className="w-36 h-36 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -213,7 +254,7 @@ export default function ProgressCharts({
               </ResponsiveContainer>
             </div>
 
-            {/* Rincian Jumlah & Persentase per Status */}
+            {/* Rincian jumlah dan persentase tiap status */}
             <div className="flex-1 w-full space-y-2.5">
               {ORDERED_STATUS_LIST.map((statusName) => {
                 const found = pieDataStatus.find((item) => item.name === statusName);
@@ -253,7 +294,7 @@ export default function ProgressCharts({
           </div>
         </div>
 
-        {/* 2. Kategori Target */}
+        {/* 2. Kartu Kategori Target */}
         <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
@@ -265,7 +306,7 @@ export default function ProgressCharts({
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 min-h-[176px] my-auto">
-            {/* Donut Chart Kategori */}
+            {/* Donut chart kategori target */}
             <div className="w-36 h-36 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -292,7 +333,7 @@ export default function ProgressCharts({
               </ResponsiveContainer>
             </div>
 
-            {/* Rincian Jumlah & Persentase per Kategori */}
+            {/* Rincian jumlah dan persentase tiap kategori */}
             <div className="flex-1 w-full space-y-1.5 max-h-40 overflow-y-auto pr-1">
               {pieDataKategori.length === 0 ? (
                 <p className="text-[11px] text-slate-400">Belum ada data kategori.</p>
@@ -335,7 +376,7 @@ export default function ProgressCharts({
           </div>
         </div>
 
-        {/* 3. Tren Deadline */}
+        {/* 3. Kartu Tren Deadline */}
         <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
@@ -344,6 +385,7 @@ export default function ProgressCharts({
             <span className="text-[10px] font-medium text-slate-400">Per Tanggal</span>
           </div>
 
+          {/* Area chart jumlah tenggat waktu per tanggal */}
           <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -385,13 +427,15 @@ export default function ProgressCharts({
         </div>
       </div>
 
-      {/* Baris Bawah: Status Pengerjaan per PIC */}
+      {/* Baris Bawah: Grafik Status Pengerjaan per PIC */}
       {stackedDataPicStatus.length > 0 && (
         <div className="bg-white p-4 rounded-xl border border-white border-b-7 hover:border-b-red-500 transition-colors duration-300 shadow-2xs">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
               Status Pengerjaan per PIC
             </h3>
+
+            {/* Legenda warna status per PIC */}
             <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-[#94a3b8]" /> Belum Dikerjakan
@@ -408,6 +452,7 @@ export default function ProgressCharts({
             </div>
           </div>
 
+          {/* Bar chart perbandingan status tiap PIC */}
           <div className="h-52 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart

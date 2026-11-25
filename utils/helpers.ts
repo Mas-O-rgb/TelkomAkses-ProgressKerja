@@ -1,3 +1,6 @@
+// ==================== KONSTANTA & TIPE DATA ====================
+
+// Daftar nama PIC bawaan sebagai cadangan jika data profil belum dimuat dari database
 export const DAFTAR_PIC = [
   'ANDY AKBAR MAKMUR',
   'ANOM YUDOSENO AJI',
@@ -8,18 +11,24 @@ export const DAFTAR_PIC = [
   'SHAKILA LARASATI',
 ];
 
+// Tipe union untuk label status pengerjaan target yang diakui sistem
 export type TaskStatusText =
   | 'SUDAH SELESAI'
   | 'OVERDUE'
   | 'ON PROGRESS'
   | 'BELUM DIKERJAKAN';
 
+// Struktur informasi status lengkap dengan gaya kelas badge Tailwind
 export interface StatusInfo {
+  // Label teks status target
   text: TaskStatusText;
+  // Kelas warna latar, teks, dan border untuk badge status
   className: string;
 }
 
-// Ambil tanggal hari ini (YYYY-MM-DD) sesuai zona waktu Asia/Jakarta
+// ==================== FUNGSI HELPER WAKTU & STATUS ====================
+
+// Mengambil tanggal hari ini (format YYYY-MM-DD) sesuai zona waktu Asia/Jakarta
 export const getTodayJakarta = (): string => {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Jakarta',
@@ -29,18 +38,20 @@ export const getTodayJakarta = (): string => {
   }).format(new Date());
 };
 
-// Tentukan nilai completed_at saat simpan/update target
+// Menentukan nilai tanggal penyelesaian (completed_at) saat target baru atau diperbarui
 export const resolveCompletedAt = (
   progress: number,
   existingCompletedAt?: string | null
 ): string | null => {
+  // Jika progres mencapai 100%, pertahankan tanggal selesai lama atau isi dengan tanggal hari ini
   if (progress === 100) {
     return existingCompletedAt || getTodayJakarta();
   }
+  // Jika progres belum 100%, kosongkan tanggal penyelesaian
   return null;
 };
 
-// Hitung teks status secara terpusat berdasarkan tenggat, progress, dan tanggal selesai
+// Menghitung teks status target secara terpusat berdasarkan tenggat, progres, dan tanggal selesai
 export const calculateTaskStatus = (
   tenggat: string,
   progress: number,
@@ -48,7 +59,7 @@ export const calculateTaskStatus = (
 ): TaskStatusText => {
   const today = getTodayJakarta();
 
-  // 1. Jika sudah 100%, cek kapan diselesaikan (completedAt atau tanggal hari ini saat baru 100%)
+  // 1. Jika progres 100%, bandingkan tanggal selesai dengan tenggat waktu
   if (progress === 100) {
     const finishDate = completedAt || today;
     if (tenggat && finishDate > tenggat) {
@@ -57,20 +68,21 @@ export const calculateTaskStatus = (
     return 'SUDAH SELESAI';
   }
 
-  // 2. Jika belum 100% dan tanggal hari ini sudah melewati tenggat waktu
+  // 2. Jika progres belum 100% dan hari ini sudah melewati tenggat waktu
   if (tenggat && tenggat < today) {
     return 'OVERDUE';
   }
 
-  // 3. Jika sedang dikerjakan (0% < progress < 100%)
+  // 3. Jika progres berada di antara 1% - 99%
   if (progress > 0) {
     return 'ON PROGRESS';
   }
 
-  // 4. Jika belum dikerjakan sama sekali (0%)
+  // 4. Jika progres masih 0% dan belum melewati tenggat
   return 'BELUM DIKERJAKAN';
 };
 
+// Mengembalikan teks status sekaligus gaya kelas badge Tailwind untuk tampilan tabel
 export const getStatusInfo = (
   tenggat: string,
   progress: number,

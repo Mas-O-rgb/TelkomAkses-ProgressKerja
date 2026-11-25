@@ -1,29 +1,26 @@
 // Menandai file ini sebagai Client Component di Next.js App Router
 'use client';
 
-// Mengimpor hook React untuk state dan efek samping
-import React, { useState, useEffect } from 'react';
-// Mengimpor hook navigasi halaman dari Next.js App Router
+// Mengimpor hook React untuk mengelola state dan efek samping
+import React, { useEffect, useState } from 'react';
+// Mengimpor hook navigasi halaman di Next.js App Router
 import { useRouter } from 'next/navigation';
 // Mengimpor komponen Image bawaan Next.js untuk optimasi gambar
 import Image from 'next/image';
 // Mengimpor ikon UI dari lucide-react
 import {
-  ShieldCheck,
-  UserCheck,
-  Loader2,
-  Zap,
-  TrendingUp,
-  Users,
-  Shield,
-  ListCheck,
   Clock,
   FolderKanban,
+  ListCheck,
+  Loader2,
+  Shield,
+  UserCheck,
+  Users,
 } from 'lucide-react';
-// Mengimpor instance client Supabase untuk mengambil daftar profil pengguna
+// Mengimpor client Supabase untuk mengambil daftar profil pengguna
 import { supabase } from '@/lib/supabaseClient';
 
-// Mendefinisikan struktur kolom data dari tabel profiles di Supabase
+// Mendefinisikan struktur kolom data dari tabel `profiles` di Supabase
 interface Profile {
   // ID unik profil pengguna
   id: string;
@@ -35,24 +32,21 @@ interface Profile {
   nama_pic: string | null;
 }
 
-// Menyimpan tahun berjalan untuk teks hak cipta di footer
-const CURRENT_YEAR = new Date().getFullYear();
-
-// Daftar poin keunggulan yang ditampilkan di sisi kiri portal
+// Daftar poin keunggulan yang ditampilkan di sisi kiri halaman portal
 const PORTAL_HIGHLIGHTS = [
-  // Poin pertama tentang keamanan akses
+  // Highlight pemantauan target dan progres
   {
     id: 'target',
     label: 'Pantau Target & Progres',
     icon: ListCheck,
   },
-  // Poin kedua tentang kecepatan akses
+  // Highlight pemantauan status dan batas waktu
   {
     id: 'status',
     label: 'Status & Batas Waktu Terpantau',
     icon: Clock,
   },
-  // Poin ketiga tentang dukungan produktivitas tim
+  // Highlight pengelolaan dokumen dan riwayat terpusat
   {
     id: 'documents',
     label: 'Dokumen & Riwayat Terpusat',
@@ -60,25 +54,27 @@ const PORTAL_HIGHLIGHTS = [
   },
 ];
 
-// Komponen khusus untuk mengatur background halaman (silakan isi/ubah sesuai desain yang kamu inginkan)
+// Komponen latar belakang dekoratif khusus halaman login portal
 function PortalBackground() {
   return (
+    // Membungkus seluruh lapisan dekorasi agar fixed, tidak menghalangi klik, dan tersembunyi dari screen reader
     <div
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
       aria-hidden="true"
     >
+      {/* Gambar latar belakang utama portal */}
       <img src="/bg-portal.png" alt="" className="w-full h-full object-cover" />
 
-      {/* Dasar latar belakang terang bersih */}
+      {/* Lapisan overlay terang agar teks dan kartu di atasnya mudah dibaca */}
       <div className="absolute inset-0 bg-slate-50/50" />
 
       {/* Aksen cahaya lembut di pojok kanan atas */}
       <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-rose-100/70 blur-3xl" />
 
       {/* Aksen cahaya lembut di pojok kiri bawah */}
-      <div className="absolute -bottom-28 -left-24 w-96 h-96 rounded-full bg-sky-3  00/70 blur-3xl" />
+      <div className="absolute -bottom-28 -left-24 w-96 h-96 rounded-full bg-sky-300/70 blur-3xl" />
 
-      {/* Pola totol berulang tipis di seluruh background */}
+      {/* Pola titik berulang tipis di seluruh area latar belakang */}
       <div
         className="absolute inset-0 opacity-45"
         style={{
@@ -91,43 +87,39 @@ function PortalBackground() {
 }
 
 /**
- * Halaman masuk (login) berbasis pemilihan peran/akun dari tabel `profiles` di Supabase
- * dengan tema terang, komponen background terpisah, dan tata letak terpusat.
+ * Halaman masuk (login) berbasis pemilihan akun dari tabel `profiles` di Supabase
+ * untuk mengarahkan pengguna ke dashboard `/admin` atau `/pic`.
  */
 export default function LoginPage() {
-  // Instance router untuk perpindahan halaman
+  // Instance router Next.js untuk berpindah halaman setelah memilih akun
   const router = useRouter();
-  // State daftar profil akun dari Supabase
+  // Menyimpan daftar profil akun admin dan PIC dari Supabase
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  // State indikator loading saat memuat daftar akun
+  // Menandakan proses pengambilan data profil masih berlangsung
   const [loading, setLoading] = useState(true);
 
-  // Mengambil daftar akun admin dan PIC saat halaman pertama kali dibuka
+  // Mengambil daftar akun dari tabel `profiles` saat komponen pertama kali dimuat
   useEffect(() => {
-    // Penanda agar tidak memperbarui state setelah komponen unmount
+    // Penanda agar state tidak di-update setelah komponen di-unmount
     let isMounted = true;
 
+    // Fungsi async internal untuk mengambil seluruh data profil dari Supabase
     async function fetchProfiles() {
-      // Mengaktifkan status loading
       setLoading(true);
-      // Mengambil seluruh baris data dari tabel profiles
       const { data, error } = await supabase.from('profiles').select('*');
 
       // Menghentikan pembaruan state jika komponen sudah tidak aktif
       if (!isMounted) return;
 
-      // Mencatat error jika gagal, atau menyimpan data profil jika berhasil
       if (error) {
         console.error('Gagal memuat profil:', error.message);
       } else if (data) {
         setProfiles(data);
       }
 
-      // Mematikan status loading
       setLoading(false);
     }
 
-    // Menjalankan pengambilan data profil
     fetchProfiles();
 
     // Membersihkan flag isMounted saat komponen dilepas
@@ -136,43 +128,47 @@ export default function LoginPage() {
     };
   }, []);
 
-  // Menyimpan sesi admin ke sessionStorage lalu mengarahkan ke dashboard admin
+  // Menyimpan identitas sesi admin ke sessionStorage lalu mengarahkan ke rute `/admin`
   const handleLoginSpecificAdmin = (adminName: string) => {
     sessionStorage.setItem('userRole', 'admin');
     sessionStorage.setItem('userName', adminName);
-    router.push('/admin/dashboard');
+    router.push('/admin');
   };
 
-  // Mengarahkan langsung ke halaman dinamis PIC sesuai nama yang dipilih
+  // Menyimpan identitas sesi PIC ke sessionStorage lalu mengarahkan ke rute `/pic`
   const handleLoginPIC = (picName: string) => {
-    router.push(`/pic/${encodeURIComponent(picName)}`);
+    sessionStorage.setItem('userRole', 'pic');
+    sessionStorage.setItem('userName', picName);
+    router.push('/pic');
   };
 
-  // Menyaring profil dengan peran admin yang memiliki nama lengkap
+  // Menyaring akun admin yang memiliki nama_pic valid
   const adminProfiles = profiles.filter((profile) => profile.role === 'admin' && profile.nama_pic);
-  // Menyaring profil dengan peran PIC yang memiliki nama lengkap
+  // Menyaring akun PIC yang memiliki nama_pic valid
   const picProfiles = profiles.filter((profile) => profile.role === 'pic' && profile.nama_pic);
 
-  // Memisahkan kartu PIC penuh (kelipatan 3) dan sisa baris bawah agar tampil melebar
+  // Menghitung jumlah kartu PIC penuh pada baris kelipatan 3
   const fullRowPicCount = Math.floor(picProfiles.length / 3) * 3;
+  // Daftar kartu PIC untuk grid baris penuh (3 kolom di layar md+)
   const gridPicProfiles = picProfiles.slice(0, fullRowPicCount);
+  // Sisa kartu PIC di baris terakhir agar membagi lebar secara merata
   const remainingPicProfiles = picProfiles.slice(fullRowPicCount);
 
-  // Merender keseluruhan halaman portal pemilihan akun
   return (
+    // Kontainer utama halaman dengan tinggi minimal satu layar penuh
     <div className="min-h-screen w-full text-slate-800 flex flex-col justify-between relative overflow-x-clip">
-      {/* Memanggil komponen background terpisah */}
+      {/* Lapisan background dekoratif halaman */}
       <PortalBackground />
 
-      {/* Wrapper pemusat vertikal & horizontal agar tetap seimbang di berbagai skala/zoom */}
+      {/* Wrapper pemusat konten utama secara vertikal dan horizontal */}
       <div className="flex-1 w-full flex items-center justify-center px-5 sm:px-8 lg:px-12 py-8 relative z-10">
-        {/* Konten utama split 2 kolom dengan batas lebar adaptif */}
+        {/* Tata letak utama 2 kolom (5 kolom info kiri, 7 kolom pilihan akun kanan) */}
         <main className="w-full max-w-6xl xl:max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          {/* Kolom kiri: brand, sambutan, dan badge keunggulan */}
+          {/* Kolom kiri: logo, judul sambutan, deskripsi, dan highlight fitur */}
           <section className="lg:col-span-5 relative rounded-3xl flex flex-col items-center justify-center py-2 px-2 sm:px-4">
             <div className="relative z-10 space-y-6">
-              {/* Logo Telkom Akses */}
-              <div className='flex justify-center'>
+              {/* Logo instansi */}
+              <div className="flex justify-center">
                 <Image
                   src="/telkom_akses.png"
                   alt="Logo Telkom Akses"
@@ -183,7 +179,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Judul sambutan dan deskripsi singkat */}
+              {/* Judul utama dan deskripsi singkat aplikasi */}
               <div className="space-y-2.5 max-w-md text-center">
                 <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-800 leading-[1.18]">
                   Selamat Datang di
@@ -196,7 +192,7 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Daftar pill badge keunggulan portal */}
+              {/* Daftar badge keunggulan portal */}
               <div className="flex flex-col items-center gap-2.5 pt-1">
                 {PORTAL_HIGHLIGHTS.map((item) => {
                   const IconComponent = item.icon;
@@ -218,7 +214,7 @@ export default function LoginPage() {
             </div>
           </section>
 
-          {/* Kolom kanan: kartu putih utama "Pilih Akun Anda" */}
+          {/* Kolom kanan: kartu pemilihan akun Admin dan PIC */}
           <section className="lg:col-span-7 bg-white/95 backdrop-blur-xs rounded-[28px] shadow-[0_18px_45px_rgba(15,23,42,0.07)] border border-slate-100 p-6 sm:p-8 lg:p-9">
             {/* Header kartu pemilihan akun */}
             <div className="text-center mb-7">
@@ -235,7 +231,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Indikator loading atau daftar kartu akun Admin & PIC */}
+            {/* Menampilkan spinner saat data profil dimuat, atau daftar kartu akun setelah siap */}
             {loading ? (
               <div className="flex flex-col items-center justify-center py-16 space-y-3">
                 <Loader2 size={32} className="animate-spin text-[#ED1E28]" />
@@ -243,7 +239,7 @@ export default function LoginPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Kartu akses Admin utama berbingkai merah menonjol di bagian atas */}
+                {/* Kartu khusus akun Admin di bagian paling atas */}
                 {adminProfiles.map((admin) => (
                   <button
                     key={admin.id}
@@ -252,15 +248,15 @@ export default function LoginPage() {
                     className="group w-full bg-rose-50/80 border-[1.5px] border-[#ED1E28] rounded-2xl px-5 py-4 flex items-center justify-between gap-4 text-left cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:bg-rose-50 transition-all duration-200 ease-out"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      {/* Ikon avatar admin */}
+                      {/* Avatar ikon admin */}
                       <div className="w-12 h-12 rounded-full bg-rose-100/90 text-[#ED1E28] flex items-center justify-center shrink-0 group-hover:bg-[#ED1E28] group-hover:text-white transition-colors">
                         <UserCheck size={22} />
                       </div>
 
-                      {/* Garis pemisah vertikal tipis */}
+                      {/* Pemisah vertikal antara avatar dan informasi akun */}
                       <span className="h-9 w-px bg-rose-200 shrink-0" />
 
-                      {/* Nama admin dan label Admin Dashboard */}
+                      {/* Nama lengkap admin dan label peran */}
                       <div className="min-w-0">
                         <div className="text-sm sm:text-base font-bold text-slate-800 truncate">
                           {admin.nama_pic}
@@ -269,58 +265,58 @@ export default function LoginPage() {
                       </div>
                     </div>
 
-                    {/* Badge ikon shield merah di sisi kanan kartu admin */}
+                    {/* Lencana ikon shield di sisi kanan kartu admin */}
                     <span className="w-6 h-6 rounded-full bg-[#ED1E28] text-white flex items-center justify-center shrink-0 shadow-2xs">
                       <Shield size={14} strokeWidth={3} />
                     </span>
                   </button>
                 ))}
 
-                {/* Grid 3 kolom untuk baris penuh (kelipatan 3) */}
-{gridPicProfiles.length > 0 && (
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-    {gridPicProfiles.map((profile) => (
-      <button
-        key={profile.id}
-        type="button"
-        onClick={() => handleLoginPIC(profile.nama_pic!)}
-        className="group bg-white border border-slate-200/90 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:border-[#ED1E28] hover:bg-rose-50/30 transition-all duration-200 ease-out"
-      >
-        <div className="w-11 h-11 rounded-full bg-slate-200/80 text-slate-600 group-hover:bg-[#ED1E28] group-hover:text-white flex items-center justify-center mb-2.5 transition-colors">
-          <UserCheck size={20} />
-        </div>
-        <span className="text-xs sm:text-[13px] font-bold text-slate-800 line-clamp-2 leading-snug">
-          {profile.nama_pic}
-        </span>
-        <span className="text-[11px] text-slate-500 mt-0.5">PIC Dashboard</span>
-      </button>
-    ))}
-  </div>
-)}
+                {/* Grid 3 kolom untuk baris kartu PIC yang penuh */}
+                {gridPicProfiles.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                    {gridPicProfiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => handleLoginPIC(profile.nama_pic!)}
+                        className="group bg-white border border-slate-200/90 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:border-[#ED1E28] hover:bg-rose-50/30 transition-all duration-200 ease-out"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-slate-200/80 text-slate-600 group-hover:bg-[#ED1E28] group-hover:text-white flex items-center justify-center mb-2.5 transition-colors">
+                          <UserCheck size={20} />
+                        </div>
+                        <span className="text-xs sm:text-[13px] font-bold text-slate-800 line-clamp-2 leading-snug">
+                          {profile.nama_pic}
+                        </span>
+                        <span className="text-[11px] text-slate-500 mt-0.5">PIC Dashboard</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-{/* Sisa kartu di baris terakhir membagi lebar rata dalam satu baris */}
-{remainingPicProfiles.length > 0 && (
-  <div className="flex flex-col sm:flex-row gap-3.5">
-    {remainingPicProfiles.map((profile) => (
-      <button
-        key={profile.id}
-        type="button"
-        onClick={() => handleLoginPIC(profile.nama_pic!)}
-        className="group flex-1 bg-white border border-slate-200/90 rounded-2xl px-5 py-3.5 flex items-center justify-center gap-3.5 text-left cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:border-[#ED1E28] hover:bg-rose-50/30 transition-all duration-200 ease-out"
-      >
-        <div className="w-11 h-11 rounded-full bg-slate-200/80 text-slate-600 group-hover:bg-[#ED1E28] group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
-          <UserCheck size={20} />
-        </div>
-        <div className="min-w-0">
-          <div className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-            {profile.nama_pic}
-          </div>
-          <div className="text-[11px] text-slate-500">PIC Dashboard</div>
-        </div>
-      </button>
-    ))}
-  </div>
-)}
+                {/* Baris terakhir untuk sisa kartu PIC agar memenuhi lebar secara seimbang */}
+                {remainingPicProfiles.length > 0 && (
+                  <div className="flex flex-col sm:flex-row gap-3.5">
+                    {remainingPicProfiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => handleLoginPIC(profile.nama_pic!)}
+                        className="group flex-1 bg-white border border-slate-200/90 rounded-2xl px-5 py-3.5 flex items-center justify-center gap-3.5 text-left cursor-pointer shadow-2xs hover:-translate-y-1 hover:shadow-lg hover:border-[#ED1E28] hover:bg-rose-50/30 transition-all duration-200 ease-out"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-slate-200/80 text-slate-600 group-hover:bg-[#ED1E28] group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
+                          <UserCheck size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                            {profile.nama_pic}
+                          </div>
+                          <div className="text-[11px] text-slate-500">PIC Dashboard</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </section>

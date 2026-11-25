@@ -2,24 +2,26 @@
 'use client';
 
 // Mengimpor hook React untuk state dan efek samping
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 // Mengimpor ikon-ikon UI dari lucide-react
 import {
-  Save,
-  X,
-  FileText,
-  Loader2,
+  Archive,
   ChevronLeft,
   ChevronRight,
-  Send,
   Download,
-  Archive,
+  FileText,
+  Loader2,
   Plus,
+  Save,
+  Send,
+  X,
 } from 'lucide-react';
-// Mengimpor daftar PIC dan helper penentuan info status terpusat
-import { DAFTAR_PIC, getStatusInfo } from '@/utils/helpers';
-// Mengimpor library JSZip untuk mengompres beberapa file menjadi arsip .zip
+// Mengimpor library JSZip untuk mengompres beberapa dokumen menjadi satu file .zip
 import JSZip from 'jszip';
+// Mengimpor daftar PIC bawaan dan helper penentuan gaya badge status
+import { DAFTAR_PIC, getStatusInfo } from '@/utils/helpers';
+
+// ==================== TIPE DATA & KONSTANTA ====================
 
 // Mendefinisikan struktur data objek Task yang digunakan di tabel dan modal
 export interface Task {
@@ -47,7 +49,7 @@ export interface Task {
   fileDokumen?: File | null;
 }
 
-// Mendefinisikan struktur item dokumen yang ditampilkan di modal preview
+// Mendefinisikan struktur item dokumen yang ditampilkan di modal pratinjau
 interface PreviewDocumentItem {
   // URL file dokumen
   url: string;
@@ -79,7 +81,20 @@ interface ProgressTableProps {
   onMarkAsRead?: (taskId: number, cleanedKeterangan: string) => Promise<void> | void;
   // Callback untuk membuka modal pop-up tambah target baru (khusus admin)
   onOpenAddModal?: () => void;
+  // Urutan nama kategori yang sama dengan donut chart kategori (opsional)
+  categoryOrder?: string[];
 }
+
+// Gaya badge kategori yang diurutkan sama persis dengan KATEGORI_COLORS di ProgressCharts
+const KATEGORI_BADGE_COLORS = [
+  'bg-slate-100 text-slate-700 border-slate-300',
+  'bg-red-50 text-red-700 border-red-200',
+  'bg-emerald-50 text-emerald-700 border-emerald-200',
+  'bg-blue-50 text-blue-700 border-blue-200',
+  'bg-amber-50 text-amber-700 border-amber-200',
+  'bg-violet-50 text-violet-700 border-violet-200',
+  'bg-cyan-50 text-cyan-700 border-cyan-200',
+];
 
 // Daftar pilihan persentase progres yang tersedia saat edit/update baris
 const PROGRESS_OPTIONS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
@@ -90,30 +105,30 @@ const DOCUMENT_DIVIDER = '│';
 // Nama pengirim bawaan ketika balasan/catatan dikirim dari sisi admin
 const ADMIN_SENDER_NAME = 'Hendra Hadiyatna Djatnika';
 
-// Nilai awal kosong untuk state edit baris
+// Nilai awal kosong untuk state formulir edit baris
 const EMPTY_EDIT_FORM: Task = {
-  // ID default 0
   id: 0,
-  // Kategori kosong
   kategori: '',
-  // Nama target kosong
   namaTarget: '',
-  // Waktu mulai kosong
   waktuMulai: '',
-  // Tenggat waktu kosong
   tenggatWaktu: '',
-  // Progres awal 0
   progress: 0,
-  // PIC kosong
   pic: '',
-  // Dokumen kosong
   dokumen: '',
-  // Keterangan kosong
   keterangan: '',
-  // Tanggal selesai awal null
   completedAt: null,
-  // File upload awal null
   fileDokumen: null,
+};
+
+// ==================== HELPER MURNI ====================
+
+// Menentukan kelas Tailwind badge berdasarkan posisi kategori pada urutan donut chart
+const getKategoriBadgeClass = (kategori: string, orderList: string[]): string => {
+  const index = orderList.findIndex(
+    (item) => item.trim().toLowerCase() === kategori.trim().toLowerCase()
+  );
+  const safeIndex = index >= 0 ? index : 0;
+  return KATEGORI_BADGE_COLORS[safeIndex % KATEGORI_BADGE_COLORS.length];
 };
 
 // Memeriksa apakah string merupakan URL HTTP atau HTTPS yang valid
@@ -126,13 +141,9 @@ const hasDocumentLink = (dokumen?: string | null): boolean =>
 
 // Memformat waktu saat ini ke format lokal Indonesia (tanggal + jam:menit)
 const formatCurrentTimestamp = (): string => {
-  // Mengambil waktu perangkat saat ini
   const now = new Date();
-  // Menggabungkan tanggal lokal dan jam:menit
   return `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID', {
-    // Jam 2 digit
     hour: '2-digit',
-    // Menit 2 digit
     minute: '2-digit',
   })}`;
 };
@@ -140,51 +151,33 @@ const formatCurrentTimestamp = (): string => {
 // Menghapus tag penanda belum dibaca ([UNREAD_BY_ADMIN] / [UNREAD_BY_PIC]) dari teks
 const stripUnreadTags = (text: string): string =>
   text
-    // Menghapus tag di awal teks untuk admin
     .replace(/^\[UNREAD_BY_ADMIN\]\s*/g, '')
-    // Menghapus tag di awal teks untuk PIC
     .replace(/^\[UNREAD_BY_PIC\]\s*/g, '')
-    // Menghapus tag yang tersisa di posisi mana pun
     .replace(/\[UNREAD_BY_(ADMIN|PIC)\]/g, '')
-    // Merapikan spasi berlebih di ujung
     .trim();
 
 // Menambahkan catatan atau balasan baru ke bagian paling atas riwayat keterangan
 const appendNotesEntry = (
-  // Riwayat keterangan yang sudah ada
   existingNotes: string | null | undefined,
-  // Nama pengirim pesan
   senderName: string,
-  // Tag belum dibaca untuk pihak penerima
   unreadTag: string,
-  // Isi pesan baru
   message: string
 ): string => {
-  // Membersihkan tag lama dari riwayat sebelumnya
   const cleanExisting = stripUnreadTags(existingNotes || '-');
-  // Menyusun entri pesan baru beserta tag penerima dan timestamp
   const newEntry = `${unreadTag} [${formatCurrentTimestamp()}] ${senderName}: ${message}`;
-  // Menggabungkan dengan riwayat lama jika ada catatan sebelumnya
   return cleanExisting && cleanExisting !== '-'
-    ? `${newEntry}
-${HISTORY_DIVIDER}
-${cleanExisting}`
+    ? `${newEntry}\n${HISTORY_DIVIDER}\n${cleanExisting}`
     : newEntry;
 };
 
 // Mengambil nama file dari URL penyimpanan atau memakai nama fallback jika gagal
 const extractFilenameFromUrl = (url: string, fallbackName: string): string => {
   try {
-    // Membuang query string setelah '?' jika ada
     const cleanUrl = url.split('?')[0];
-    // Memecah path berdasarkan '/'
     const parts = cleanUrl.split('/');
-    // Mengambil segmen terakhir sebagai nama file
     const rawName = parts[parts.length - 1];
-    // Mendekode karakter URL dan mengembalikannya
     return rawName ? decodeURIComponent(rawName) : fallbackName;
   } catch {
-    // Mengembalikan nama cadangan jika parsing gagal
     return fallbackName;
   }
 };
@@ -192,22 +185,17 @@ const extractFilenameFromUrl = (url: string, fallbackName: string): string => {
 // Mengurai string riwayat dokumen menjadi array item untuk modal pratinjau
 const parseDocumentHistory = (dokumenString: string): PreviewDocumentItem[] =>
   dokumenString.split(DOCUMENT_DIVIDER).map((entry) => {
-    // Jika entri memakai format "[waktu] uploader::url"
     if (entry.includes('::')) {
-      // Memisahkan metadata pengunggah/waktu dengan URL
       const [meta, url] = entry.split('::');
-      // Mengekstrak teks di dalam tanda kurung siku [...]
       const timeMatch = meta.match(/\[(.*?)\]/);
-      // Mengambil timestamp jika ditemukan
       const time = timeMatch ? timeMatch[1] : '';
-      // Mengambil nama pengunggah setelah menghapus bagian timestamp
       const uploader = meta.replace(/\[.*?\]\s*/, '').trim();
-      // Mengembalikan objek item dokumen lengkap
       return { url: url.trim(), uploader, time };
     }
-    // Fallback jika entri hanya berupa URL atau teks biasa
     return { url: entry.trim(), uploader: '', time: '' };
   });
+
+// ==================== KOMPONEN TABEL ====================
 
 /**
  * Komponen tabel utama monitoring progress target dengan fitur:
@@ -227,18 +215,27 @@ export default function ProgressTable({
   isPicView = false,
   onMarkAsRead,
   onOpenAddModal,
+  categoryOrder,
 }: ProgressTableProps) {
+  // --- STATE MODE EDIT & LOADING BARIS ---
+
   // State ID baris yang sedang dalam mode edit/update (null jika tidak ada)
   const [editingId, setEditingId] = useState<number | null>(null);
+  // State data formulir saat baris sedang diedit
+  const [editForm, setEditForm] = useState<Task>(EMPTY_EDIT_FORM);
   // State ID baris yang sedang memproses aksi simpan/hapus
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
-  // State jumlah baris per halaman (default 25 sesuai pengaturan tabel sebelumnya)
+  // --- STATE PAGINASI ---
+
+  // State jumlah baris per halaman
   const [itemsPerPage, setItemsPerPage] = useState(25);
   // State nomor halaman paginasi aktif
   const [currentPage, setCurrentPage] = useState(1);
   // State nilai teks pada kotak input "Ke hal"
   const [pageInput, setPageInput] = useState('1');
+
+  // --- STATE MODAL RIWAYAT KETERANGAN ---
 
   // State data task yang sedang dibuka pada modal riwayat keterangan
   const [activeHistoryTask, setActiveHistoryTask] = useState<Task | null>(null);
@@ -249,6 +246,8 @@ export default function ProgressTable({
   // State indikator pengiriman balasan pada modal riwayat
   const [isSendingReply, setIsSendingReply] = useState(false);
 
+  // --- STATE MODAL PRATINJAU DOKUMEN ---
+
   // State daftar dokumen pada modal pratinjau
   const [previewDocs, setPreviewDocs] = useState<PreviewDocumentItem[]>([]);
   // State indeks tab dokumen yang sedang aktif dilihat
@@ -257,168 +256,24 @@ export default function ProgressTable({
   const [previewTitle, setPreviewTitle] = useState<string>('');
   // State indikator proses pembuatan file ZIP
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
-  // State data formulir saat baris sedang diedit
-  const [editForm, setEditForm] = useState<Task>(EMPTY_EDIT_FORM);
 
-  // Tag unread yang dicek untuk tampilan aktif (PIC atau Admin)
+  // --- DATA TURUNAN (FILTER, KATEGORI & PAGINASI) ---
+
+  // Mengambil daftar kategori unik dari data tasks untuk dropdown filter & fallback urutan warna
+  const uniqueCategories = Array.from(new Set(tasks.map((task) => task.kategori).filter(Boolean)));
+  // Menggunakan urutan kategori dari donut chart jika tersedia, atau fallback ke kategori unik pada tabel
+  const activeCategoryOrder =
+    categoryOrder && categoryOrder.length > 0 ? categoryOrder : uniqueCategories;
+
+  // Tag unread yang dicek untuk peran aktif (PIC atau Admin)
   const activeUnreadTag = isPicView ? '[UNREAD_BY_PIC]' : '[UNREAD_BY_ADMIN]';
   // Tag unread yang disematkan saat mengirim pesan baru ke pihak lawan
   const outgoingUnreadTag = isPicView ? '[UNREAD_BY_ADMIN]' : '[UNREAD_BY_PIC]';
 
-  // Menyinkronkan isi modal riwayat jika data task di state induk berubah
-  useEffect(() => {
-    // Melewati jika modal riwayat tidak sedang terbuka
-    if (!activeHistoryTask) return;
-    // Mencari versi terbaru dari task yang sedang dibuka
-    const latestUpdated = tasks.find((task) => task.id === activeHistoryTask.id);
-    // Memperbarui state modal jika keterangan berubah
-    if (latestUpdated && latestUpdated.keterangan !== activeHistoryTask.keterangan) {
-      setActiveHistoryTask(latestUpdated);
-    }
-  }, [tasks, activeHistoryTask]);
-
-  // Menghapus ID dari locallyReadIds jika ada pesan baru masuk lagi dari server
-  useEffect(() => {
-    tasks.forEach((task) => {
-      // Mengecek apakah task memiliki tag belum dibaca
-      const hasUnread = task.keterangan?.includes(activeUnreadTag);
-      // Mengeluarkan ID dari daftar sudah dibaca lokal agar badge BARU muncul kembali
-      if (hasUnread && locallyReadIds.includes(task.id)) {
-        setLocallyReadIds((prev) => prev.filter((id) => id !== task.id));
-      }
-    });
-  }, [tasks, activeUnreadTag, locallyReadIds]);
-
-  // Membuka modal riwayat keterangan sekaligus menandai pesan sebagai sudah dibaca
-  const handleOpenHistory = async (task: Task) => {
-    // Membuka modal dengan data task terpilih
-    setActiveHistoryTask(task);
-    // Mengosongkan input balasan sebelumnya
-    setReplyMessage('');
-
-    // Jika ada tag belum dibaca untuk peran saat ini, bersihkan tag tersebut
-    if (task.keterangan && task.keterangan.includes(activeUnreadTag)) {
-      // Menghapus tag unread dari string keterangan
-      const cleanedKeterangan = task.keterangan
-        .replace(new RegExp(`\\s*${activeUnreadTag.replace(/[\[\]]/g, '\\$&')}\\s*`, 'g'), '')
-        .trim();
-
-      // Memperbarui keterangan di modal yang sedang terbuka
-      setActiveHistoryTask({ ...task, keterangan: cleanedKeterangan });
-
-      // Mencatat ID task sebagai sudah dibaca secara lokal
-      if (!locallyReadIds.includes(task.id)) {
-        setLocallyReadIds((prev) => [...prev, task.id]);
-      }
-
-      // Menyimpan perubahan status baca ke database melalui callback induk
-      if (onMarkAsRead) {
-        await onMarkAsRead(task.id, cleanedKeterangan);
-      }
-    }
-  };
-
-  // Membuka modal pratinjau dokumen untuk satu target
-  const handleOpenPreview = (dokumenString: string, targetTitle: string) => {
-    // Mengurai riwayat dokumen menjadi array item
-    setPreviewDocs(parseDocumentHistory(dokumenString));
-    // Mengatur tab awal ke dokumen pertama (terbaru)
-    setActiveDocIndex(0);
-    // Menyimpan judul target untuk ditampilkan di modal
-    setPreviewTitle(targetTitle);
-  };
-
-  // Mengunduh seluruh dokumen valid pada target ke dalam satu file .zip
-  const handleDownloadAllAsZip = async () => {
-    // Menyaring dokumen yang memiliki URL HTTP/HTTPS valid
-    const validDocs = previewDocs.filter((doc) => isValidHttpUrl(doc.url));
-
-    // Menghentikan proses jika tidak ada URL valid
-    if (validDocs.length === 0) {
-      alert('Tidak ada file dengan tautan valid untuk diunduh.');
-      return;
-    }
-
-    // Mengaktifkan status loading kompresi ZIP
-    setIsDownloadingZip(true);
-    try {
-      // Membuat instance arsip ZIP baru
-      const zip = new JSZip();
-      // Menghitung jumlah file yang berhasil dimasukkan ke ZIP
-      let successCount = 0;
-
-      // Mengambil seluruh blob file secara paralel
-      await Promise.all(
-        validDocs.map(async (doc, index) => {
-          // Menentukan nomor versi berdasarkan urutan riwayat
-          const versionNumber = previewDocs.length - previewDocs.indexOf(doc);
-          // Membersihkan karakter khusus pada nama pengunggah untuk nama file aman
-          const safeUploader = doc.uploader
-            ? `_${doc.uploader.replace(/[^a-zA-Z0-9_-]/g, '_')}`
-            : '';
-          // Nama file cadangan jika tidak bisa diekstrak dari URL
-          const defaultFileName = `dokumen_versi_${versionNumber}_${index + 1}`;
-          // Mengambil nama file asli dari URL
-          const originalFileName = extractFilenameFromUrl(doc.url, defaultFileName);
-          // Menyusun nama entri file di dalam arsip ZIP
-          const zipEntryName = `Versi_${versionNumber}${safeUploader}_${originalFileName}`;
-
-          try {
-            // Mengunduh file dari URL storage
-            const response = await fetch(doc.url);
-            if (!response.ok) return;
-            // Mengubah respons menjadi Blob
-            const blob = await response.blob();
-            // Menambahkan file ke dalam objek ZIP
-            zip.file(zipEntryName, blob);
-            successCount += 1;
-          } catch {
-            // Mengabaikan file yang gagal diunduh dari storage
-          }
-        })
-      );
-
-      // Memberi tahu pengguna jika seluruh file gagal diunduh
-      if (successCount === 0) {
-        alert('Gagal mengunduh file ke ZIP. Periksa koneksi atau pengaturan CORS bucket.');
-        return;
-      }
-
-      // Menghasilkan file ZIP dalam bentuk Blob
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      // Membuat object URL sementara untuk memicu unduhan browser
-      const zipObjectUrl = URL.createObjectURL(zipBlob);
-      // Membersihkan judul target agar aman dijadikan nama file ZIP
-      const safeTitle = (previewTitle || 'dokumen-target')
-        .replace(/[^a-zA-Z0-9-_ ]/g, '')
-        .trim()
-        .replace(/\s+/g, '_');
-
-      // Membuat elemen <a> tersembunyi dan memicu klik unduh
-      const downloadLink = document.createElement('a');
-      downloadLink.href = zipObjectUrl;
-      downloadLink.download = `${safeTitle}_semua_dokumen.zip`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      downloadLink.remove();
-      // Membersihkan object URL setelah beberapa saat
-      setTimeout(() => URL.revokeObjectURL(zipObjectUrl), 1500);
-    } finally {
-      // Mematikan indikator loading kompresi ZIP
-      setIsDownloadingZip(false);
-    }
-  };
-
-  // Mengambil daftar kategori unik yang ada pada data tasks untuk opsi dropdown filter
-  const uniqueCategories = Array.from(new Set(tasks.map((task) => task.kategori).filter(Boolean)));
-
   // Menyaring data tasks berdasarkan filter kategori dan kata kunci pencarian
   const filteredTasks = tasks.filter((task) => {
-    // Mengecek kesesuaian kategori
     const matchKategori = filterKategori === 'ALL' || task.kategori === filterKategori;
-    // Mengubah kata kunci pencarian menjadi huruf kecil
     const keyword = searchTerm.toLowerCase();
-    // Mengecek kecocokan kata kunci pada nama target, PIC, atau keterangan
     const matchSearch =
       task.namaTarget.toLowerCase().includes(keyword) ||
       task.pic.toLowerCase().includes(keyword) ||
@@ -435,6 +290,27 @@ export default function ProgressTable({
   // Mengambil potongan data yang ditampilkan di halaman aktif
   const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
 
+  // --- EFEK SAMPING (SINKRONISASI MODAL & PAGINASI) ---
+
+  // Menyinkronkan isi modal riwayat jika data task di state induk berubah
+  useEffect(() => {
+    if (!activeHistoryTask) return;
+    const latestUpdated = tasks.find((task) => task.id === activeHistoryTask.id);
+    if (latestUpdated && latestUpdated.keterangan !== activeHistoryTask.keterangan) {
+      setActiveHistoryTask(latestUpdated);
+    }
+  }, [tasks, activeHistoryTask]);
+
+  // Menghapus ID dari locallyReadIds jika ada pesan baru masuk lagi dari server
+  useEffect(() => {
+    tasks.forEach((task) => {
+      const hasUnread = task.keterangan?.includes(activeUnreadTag);
+      if (hasUnread && locallyReadIds.includes(task.id)) {
+        setLocallyReadIds((prev) => prev.filter((id) => id !== task.id));
+      }
+    });
+  }, [tasks, activeUnreadTag, locallyReadIds]);
+
   // Memastikan nomor halaman aktif selalu berada dalam rentang 1..totalPages
   useEffect(() => {
     setCurrentPage((prev) => Math.min(Math.max(prev, 1), totalPages));
@@ -444,6 +320,20 @@ export default function ProgressTable({
   useEffect(() => {
     setPageInput(String(currentPage));
   }, [currentPage]);
+
+  // --- HANDLER FILTER, PENCARIAN & PAGINASI ---
+
+  // Menangani perubahan dropdown filter kategori dan mereset ke halaman 1
+  const handleFilterChange = (categoryValue: string) => {
+    setFilterKategori(categoryValue);
+    setCurrentPage(1);
+  };
+
+  // Menangani perubahan input pencarian dan mereset ke halaman 1
+  const handleSearchChange = (keywordValue: string) => {
+    setSearchTerm(keywordValue);
+    setCurrentPage(1);
+  };
 
   // Memvalidasi dan mengarahkan tabel ke nomor halaman yang diketik pengguna
   const commitPageInput = () => {
@@ -459,7 +349,7 @@ export default function ProgressTable({
     setPageInput(String(validPage));
   };
 
-  // Menyusun deretan nomor halaman + ellipsis agar bar tetap rapi saat halaman banyak
+  // Menyusun deretan nomor halaman + ellipsis agar bar paginasi tetap ringkas
   const getPageNumbers = (): (number | 'ellipsis-left' | 'ellipsis-right')[] => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -479,17 +369,7 @@ export default function ProgressTable({
     return pages;
   };
 
-  // Menangani perubahan dropdown filter kategori dan mereset ke halaman 1
-  const handleFilterChange = (categoryValue: string) => {
-    setFilterKategori(categoryValue);
-    setCurrentPage(1);
-  };
-
-  // Menangani perubahan input pencarian dan mereset ke halaman 1
-  const handleSearchChange = (keywordValue: string) => {
-    setSearchTerm(keywordValue);
-    setCurrentPage(1);
-  };
+  // --- HANDLER EDIT, HAPUS & RIWAYAT KETERANGAN ---
 
   // Memulai mode edit baris dengan mengosongkan input catatan baru dan fileDokumen
   const handleStartEdit = (task: Task) => {
@@ -505,17 +385,13 @@ export default function ProgressTable({
   // Menyimpan perubahan baris yang sedang diedit
   const handleSaveEdit = async () => {
     if (!onUpdateTask) return;
-    // Menandai baris ini sedang diproses
     setActionLoadingId(editForm.id);
+
     try {
-      // Mengambil data task lama sebelum diedit
       const oldTask = tasks.find((task) => task.id === editForm.id);
-      // Mengambil riwayat keterangan lama
       const baseKeterangan = oldTask?.keterangan || '-';
-      // Mengambil catatan baru yang diketik pengguna
       const trimmedNote = editForm.keterangan?.trim();
 
-      // Menyusun keterangan akhir (menambahkan catatan baru jika ada)
       let finalKeterangan = baseKeterangan;
       if (trimmedNote) {
         const senderName = isPicView ? editForm.pic : ADMIN_SENDER_NAME;
@@ -527,55 +403,16 @@ export default function ProgressTable({
         );
       }
 
-      // Menyusun objek task yang sudah diperbarui
       const updatedTask: Task = {
         ...editForm,
         keterangan: finalKeterangan,
       };
 
-      // Menjalankan callback update ke parent/Supabase
       await onUpdateTask(updatedTask);
-      // Menandai task sebagai sudah dibaca oleh pengirim saat ini
       setLocallyReadIds((prev) => [...prev.filter((id) => id !== editForm.id), editForm.id]);
-      // Keluar dari mode edit
       setEditingId(null);
     } finally {
-      // Melepaskan status loading pada baris
       setActionLoadingId(null);
-    }
-  };
-
-  // Mengirim balasan atau catatan baru langsung dari dalam modal riwayat
-  const handleSendReplyFromModal = async () => {
-    if (!activeHistoryTask || !replyMessage.trim() || !onUpdateTask) return;
-    // Mengaktifkan indikator pengiriman balasan
-    setIsSendingReply(true);
-
-    try {
-      const originalTask = activeHistoryTask;
-      const senderName = isPicView ? originalTask.pic : ADMIN_SENDER_NAME;
-      // Menyisipkan pesan baru ke riwayat keterangan
-      const finalKeterangan = appendNotesEntry(
-        originalTask.keterangan,
-        senderName,
-        outgoingUnreadTag,
-        replyMessage.trim()
-      );
-
-      const updatedTask: Task = {
-        ...originalTask,
-        keterangan: finalKeterangan,
-      };
-
-      // Memperbarui status baca lokal dan isi modal secara langsung
-      setLocallyReadIds((prev) => [...prev.filter((id) => id !== originalTask.id), originalTask.id]);
-      setActiveHistoryTask(updatedTask);
-      setReplyMessage('');
-      // Menyimpan perubahan ke database
-      await onUpdateTask(updatedTask);
-    } finally {
-      // Mematikan indikator pengiriman balasan
-      setIsSendingReply(false);
     }
   };
 
@@ -590,12 +427,132 @@ export default function ProgressTable({
     }
   };
 
+  // Membuka modal riwayat keterangan sekaligus menandai pesan sebagai sudah dibaca
+  const handleOpenHistory = async (task: Task) => {
+    setActiveHistoryTask(task);
+    setReplyMessage('');
+
+    if (task.keterangan && task.keterangan.includes(activeUnreadTag)) {
+      const cleanedKeterangan = task.keterangan
+        .replace(new RegExp(`\\s*${activeUnreadTag.replace(/[\[\]]/g, '\\$&')}\\s*`, 'g'), '')
+        .trim();
+
+      setActiveHistoryTask({ ...task, keterangan: cleanedKeterangan });
+
+      if (!locallyReadIds.includes(task.id)) {
+        setLocallyReadIds((prev) => [...prev, task.id]);
+      }
+
+      if (onMarkAsRead) {
+        await onMarkAsRead(task.id, cleanedKeterangan);
+      }
+    }
+  };
+
+  // Mengirim balasan atau catatan baru langsung dari dalam modal riwayat
+  const handleSendReplyFromModal = async () => {
+    if (!activeHistoryTask || !replyMessage.trim() || !onUpdateTask) return;
+    setIsSendingReply(true);
+
+    try {
+      const originalTask = activeHistoryTask;
+      const senderName = isPicView ? originalTask.pic : ADMIN_SENDER_NAME;
+      const finalKeterangan = appendNotesEntry(
+        originalTask.keterangan,
+        senderName,
+        outgoingUnreadTag,
+        replyMessage.trim()
+      );
+
+      const updatedTask: Task = {
+        ...originalTask,
+        keterangan: finalKeterangan,
+      };
+
+      setLocallyReadIds((prev) => [...prev.filter((id) => id !== originalTask.id), originalTask.id]);
+      setActiveHistoryTask(updatedTask);
+      setReplyMessage('');
+      await onUpdateTask(updatedTask);
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
+
+  // --- HANDLER PRATINJAU & UNDUH DOKUMEN ---
+
+  // Membuka modal pratinjau dokumen untuk satu target
+  const handleOpenPreview = (dokumenString: string, targetTitle: string) => {
+    setPreviewDocs(parseDocumentHistory(dokumenString));
+    setActiveDocIndex(0);
+    setPreviewTitle(targetTitle);
+  };
+
+  // Mengunduh seluruh dokumen valid pada target ke dalam satu arsip .zip
+  const handleDownloadAllAsZip = async () => {
+    const validDocs = previewDocs.filter((doc) => isValidHttpUrl(doc.url));
+
+    if (validDocs.length === 0) {
+      alert('Tidak ada file dengan tautan valid untuk diunduh.');
+      return;
+    }
+
+    setIsDownloadingZip(true);
+    try {
+      const zip = new JSZip();
+      let successCount = 0;
+
+      await Promise.all(
+        validDocs.map(async (doc, index) => {
+          const versionNumber = previewDocs.length - previewDocs.indexOf(doc);
+          const safeUploader = doc.uploader
+            ? `_${doc.uploader.replace(/[^a-zA-Z0-9_-]/g, '_')}`
+            : '';
+          const defaultFileName = `dokumen_versi_${versionNumber}_${index + 1}`;
+          const originalFileName = extractFilenameFromUrl(doc.url, defaultFileName);
+          const zipEntryName = `Versi_${versionNumber}${safeUploader}_${originalFileName}`;
+
+          try {
+            const response = await fetch(doc.url);
+            if (!response.ok) return;
+            const blob = await response.blob();
+            zip.file(zipEntryName, blob);
+            successCount += 1;
+          } catch {
+            // Mengabaikan file yang gagal diunduh dari storage
+          }
+        })
+      );
+
+      if (successCount === 0) {
+        alert('Gagal mengunduh file ke ZIP. Periksa koneksi atau pengaturan CORS bucket.');
+        return;
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const zipObjectUrl = URL.createObjectURL(zipBlob);
+      const safeTitle = (previewTitle || 'dokumen-target')
+        .replace(/[^a-zA-Z0-9-_ ]/g, '')
+        .trim()
+        .replace(/\s+/g, '_');
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = zipObjectUrl;
+      downloadLink.download = `${safeTitle}_semua_dokumen.zip`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      setTimeout(() => URL.revokeObjectURL(zipObjectUrl), 1500);
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  };
+
+  // --- RENDER VIEWER DOKUMEN ---
+
   // Merender tampilan pratinjau sesuai jenis/ekstensi file yang sedang dipilih
   const renderDocumentViewer = () => {
-    // Mengambil item dokumen aktif
     const currentDoc = previewDocs[activeDocIndex];
 
-    // Menampilkan pesan informatif jika URL tidak valid
     if (!isValidHttpUrl(currentDoc?.url)) {
       return (
         <div className="text-center p-8 bg-white rounded-xl shadow-xs border border-slate-200 max-w-md">
@@ -617,7 +574,6 @@ export default function ProgressTable({
       );
     }
 
-    // Merender elemen <img> untuk format gambar umum
     if (currentDoc.url.match(/\.(jpeg|jpg|png|gif|webp)(\?.*)?$/i)) {
       return (
         <img
@@ -628,7 +584,6 @@ export default function ProgressTable({
       );
     }
 
-    // Merender kartu khusus untuk file HEIC (Apple)
     if (currentDoc.url.match(/\.heic(\?.*)?$/i)) {
       return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-white rounded-lg border border-slate-300 p-4">
@@ -649,7 +604,6 @@ export default function ProgressTable({
       );
     }
 
-    // Merender elemen <video> untuk file video
     if (currentDoc.url.match(/\.(mov|mp4|webm|ogg|m4v)(\?.*)?$/i)) {
       return (
         <video
@@ -662,7 +616,6 @@ export default function ProgressTable({
       );
     }
 
-    // Merender Office Online Viewer untuk file Excel, Word, dan PowerPoint
     if (currentDoc.url.match(/\.(xlsx|xls|docx|doc|pptx|ppt)(\?.*)?$/i)) {
       const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDoc.url)}`;
       return (
@@ -674,7 +627,6 @@ export default function ProgressTable({
       );
     }
 
-    // Merender <iframe> bawaan untuk format lain seperti PDF
     return (
       <iframe
         src={currentDoc.url}
@@ -687,7 +639,8 @@ export default function ProgressTable({
   // URL dokumen yang sedang dipilih di modal preview
   const activePreviewUrl = previewDocs[activeDocIndex]?.url;
 
-  // Merender keseluruhan komponen tabel dan modal terkait
+  // --- RENDER UTAMA ---
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-[11px]">
       {/* Toolbar filter kategori, kolom pencarian, dan tombol tambah target */}
@@ -748,16 +701,13 @@ export default function ProgressTable({
               <th className="py-2 px-1.5 text-center w-24">Aksi</th>
             </tr>
           </thead>
+
           <tbody className="divide-y divide-slate-100">
             {currentTasks.length > 0 ? (
               currentTasks.map((task, index) => {
-                // Menentukan apakah baris ini sedang dalam mode edit
                 const isEditing = editingId === task.id;
-                // Menentukan apakah aksi pada baris ini sedang berjalan
                 const isRowLoading = actionLoadingId === task.id;
-                // Mengambil nilai progres aktif (dari form edit jika sedang diedit, atau dari task)
                 const activeProgress = isEditing ? editForm.progress : task.progress;
-                // Mengambil completedAt aktif hanya jika progres bernilai 100%
                 const activeCompletedAt =
                   activeProgress === 100
                     ? isEditing
@@ -765,26 +715,20 @@ export default function ProgressTable({
                       : task.completedAt
                     : null;
 
-                // Menghitung teks dan gaya badge status berdasarkan tenggat, progres, dan completedAt
                 const statusInfo = getStatusInfo(
                   isEditing ? editForm.tenggatWaktu : task.tenggatWaktu,
                   activeProgress,
                   activeCompletedAt
                 );
-                // Menghitung nomor urut baris pada halaman saat ini
                 const rowNumber = indexOfFirstItem + index + 1;
-                // Mengecek apakah task memiliki keterangan selain '-'
                 const hasNotes = Boolean(task.keterangan && task.keterangan !== '-');
-                // Mengecek apakah ada pesan baru yang belum dibaca pada baris ini
                 const hasUnreadBadge =
                   hasNotes &&
                   Boolean(task.keterangan?.includes(activeUnreadTag)) &&
                   !locallyReadIds.includes(task.id);
-                // Menghitung jumlah entri riwayat keterangan
                 const notesHistoryCount = hasNotes
                   ? task.keterangan!.split(HISTORY_DIVIDER).length
                   : 0;
-                // Mengambil cuplikan isi pesan terbaru untuk ditampilkan di sel tabel
                 const latestNotePreview = hasNotes
                   ? task.keterangan!
                       .split(HISTORY_DIVIDER)[0]
@@ -797,7 +741,7 @@ export default function ProgressTable({
                     {/* Kolom nomor urut */}
                     <td className="py-2 px-1.5 text-center text-slate-500">{rowNumber}</td>
 
-                    {/* Kolom kategori */}
+                    {/* Kolom kategori dengan warna badge tersinkronisasi ke donut chart */}
                     <td className="py-2 px-1.5 font-semibold text-slate-700">
                       {isEditing && !isPicView ? (
                         <input
@@ -807,7 +751,12 @@ export default function ProgressTable({
                           className="w-full px-1 py-0.5 bg-white border border-slate-300 rounded text-[11px]"
                         />
                       ) : (
-                        <span className="px-1.5 py-0.5 bg-slate-100 rounded border border-slate-200 inline-block">
+                        <span
+                          className={`px-1.5 py-0.5 rounded border inline-block ${getKategoriBadgeClass(
+                            task.kategori,
+                            activeCategoryOrder
+                          )}`}
+                        >
                           {task.kategori}
                         </span>
                       )}
@@ -924,7 +873,6 @@ export default function ProgressTable({
                         </div>
                       ) : (
                         <div className="flex flex-col gap-1">
-                          {/* Cuplikan pesan terbaru */}
                           <div className="whitespace-normal break-words leading-tight text-slate-700 line-clamp-2">
                             {hasNotes ? (
                               latestNotePreview
@@ -933,7 +881,6 @@ export default function ProgressTable({
                             )}
                           </div>
 
-                          {/* Tombol membuka modal riwayat keterangan */}
                           {hasNotes && (
                             <button
                               type="button"
@@ -990,7 +937,6 @@ export default function ProgressTable({
                       <div className="inline-flex items-center gap-1">
                         {isEditing ? (
                           <>
-                            {/* Tombol simpan perubahan baris */}
                             <button
                               type="button"
                               onMouseDown={(e) => e.preventDefault()}
@@ -1008,7 +954,7 @@ export default function ProgressTable({
                                 <Save size={11} />
                               )}
                             </button>
-                            {/* Tombol batal edit baris */}
+
                             {!isRowLoading && (
                               <button
                                 type="button"
@@ -1022,7 +968,6 @@ export default function ProgressTable({
                           </>
                         ) : (
                           <>
-                            {/* Tombol masuk mode Edit (Admin) atau Update (PIC) */}
                             <button
                               type="button"
                               onClick={() => handleStartEdit(task)}
@@ -1032,7 +977,6 @@ export default function ProgressTable({
                               {isPicView ? 'Update' : 'Edit'}
                             </button>
 
-                            {/* Tombol hapus target (hanya tampil di tampilan Admin) */}
                             {!isPicView && onDelete && (
                               <button
                                 type="button"
@@ -1059,7 +1003,6 @@ export default function ProgressTable({
               })
             ) : (
               <tr>
-                {/* Pesan kosong saat tidak ada data yang sesuai filter/pencarian */}
                 <td colSpan={11} className="p-6 text-center text-slate-400">
                   Tidak ada data target yang ditemukan.
                 </td>
@@ -1071,7 +1014,6 @@ export default function ProgressTable({
 
       {/* Footer tabel: ringkasan jumlah data & tombol navigasi halaman */}
       <div className="p-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 bg-slate-50/50 text-[11px] text-slate-600">
-        {/* Informasi rentang baris yang sedang ditampilkan */}
         <div>
           Menampilkan{' '}
           <span className="font-semibold">
@@ -1084,7 +1026,6 @@ export default function ProgressTable({
 
         {/* Bar paginasi kapsul: < 1 2 3 > | 25 / hal | Ke hal [ ] */}
         <div className="flex flex-wrap items-center justify-center gap-2.5 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-2xs">
-          {/* Navigasi nomor halaman */}
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -1136,7 +1077,6 @@ export default function ProgressTable({
             </button>
           </div>
 
-          {/* Pemilih jumlah baris per halaman */}
           <select
             value={itemsPerPage}
             onChange={(e) => {
@@ -1152,7 +1092,6 @@ export default function ProgressTable({
             <option value={100}>100 / hal</option>
           </select>
 
-          {/* Input lompat ke nomor halaman tertentu */}
           <div className="flex items-center gap-1.5 text-[11px] text-slate-600">
             <span className="font-medium whitespace-nowrap">Ke hal</span>
             <input
@@ -1185,7 +1124,6 @@ export default function ProgressTable({
       {activeHistoryTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[85vh]">
-            {/* Header modal riwayat */}
             <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div>
                 <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">
@@ -1204,22 +1142,17 @@ export default function ProgressTable({
               </button>
             </div>
 
-            {/* Daftar riwayat catatan */}
             <div className="p-4 overflow-y-auto space-y-3 text-xs flex-1">
               {activeHistoryTask.keterangan ? (
                 activeHistoryTask.keterangan.split(HISTORY_DIVIDER).map((entry, entryIndex) => {
-                  // Mengekstrak waktu pada entri riwayat
                   const timeMatch = entry.match(/\[([\d\/]+\s+[\d\.]+)\]/);
                   const timestamp = timeMatch ? timeMatch[1] : '';
-                  // Membersihkan tag unread
                   const cleanEntry = stripUnreadTags(entry);
-                  // Mencari pemisah titik dua antara pengirim dan isi pesan
                   const colonIndex = cleanEntry.indexOf(':');
                   const rawSender =
                     colonIndex !== -1
                       ? cleanEntry.slice(0, colonIndex).replace(/\[.*?\]/g, '').trim()
                       : '';
-                  // Menentukan apakah pengirim merupakan admin atau PIC
                   const isAdminMessage = rawSender.toUpperCase().includes('HENDRA');
                   const senderName = isAdminMessage ? ADMIN_SENDER_NAME : activeHistoryTask.pic;
                   const messageBody =
@@ -1261,7 +1194,6 @@ export default function ProgressTable({
               )}
             </div>
 
-            {/* Form kirim balasan cepat di bagian bawah modal riwayat */}
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <textarea
@@ -1305,7 +1237,6 @@ export default function ProgressTable({
       {previewDocs.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col h-[88vh]">
-            {/* Header modal preview dokumen */}
             <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
               <div>
                 <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
@@ -1325,7 +1256,6 @@ export default function ProgressTable({
               </button>
             </div>
 
-            {/* Bilah tab versi dokumen */}
             <div className="px-4 py-2 bg-slate-100/80 border-b border-slate-200 flex items-center gap-2 overflow-x-auto shrink-0">
               {previewDocs.map((doc, docIndex) => (
                 <button
@@ -1345,12 +1275,10 @@ export default function ProgressTable({
               ))}
             </div>
 
-            {/* Area pratinjau dokumen aktif */}
             <div className="flex-1 bg-slate-200/70 p-2 overflow-hidden flex items-center justify-center">
               {renderDocumentViewer()}
             </div>
 
-            {/* Footer modal preview: tombol unduh ZIP, unduh file aktif, dan tutup */}
             <div className="p-3 bg-slate-50 border-t border-slate-100 shrink-0 flex justify-between items-center gap-2">
               <span className="text-[10px] text-slate-500">
                 Menampilkan file ke-{activeDocIndex + 1} dari {previewDocs.length} dokumen terunggah.
