@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { ShieldCheck, UserCheck, LogOut, ArrowLeft } from 'lucide-react';
 import ConfirmModal from '@/components/ConfirmModal';
+// Mengimpor state React, ikon kunci, dan komponen modal ubah password
+import { KeyRound } from 'lucide-react';
+import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 
 interface HeaderProps {
   title: string;
@@ -25,6 +28,9 @@ export default function Header({
   onBack,
 }: HeaderProps) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // State di dalam komponen Header untuk mengontrol buka/tutup modal ubah password
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Sesuaikan teks pesan dan tombol berdasarkan peran pengguna
   const logoutMessage =
@@ -77,6 +83,16 @@ export default function Header({
             </div>
           </div>
 
+          // Tombol pemicu modal ubah password di area header/navbar
+          <button
+            type="button"
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-[#ED1E28]" />
+            <span>Ubah Password</span>
+          </button>
+
           {/* Tombol pemicu modal konfirmasi keluar / ganti akun */}
           <button
             type="button"
@@ -97,6 +113,12 @@ export default function Header({
         cancelText="Batal"
         onClose={() => setIsLogoutModalOpen(false)}
         onConfirm={onLogout}
+      />
+
+      // Merender modal ubah password yang terhubung ke state isPasswordModalOpen
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
       />
     </>
   );
